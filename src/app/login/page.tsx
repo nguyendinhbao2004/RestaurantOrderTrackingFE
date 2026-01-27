@@ -13,12 +13,32 @@ export default function LoginPage() {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const { login, isAuthenticated } = useAuth();
+    const { login, logout, isAuthenticated, isLoading: authLoading } = useAuth();
     const router = useRouter();
+
+    // Show loading while checking auth state
+    if (authLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+                <div className="animate-spin h-8 w-8 border-4 border-violet-600 border-t-transparent rounded-full"></div>
+            </div>
+        );
+    }
 
     // Redirect if already authenticated
     if (isAuthenticated) {
-        return null; // AuthContext will handle redirect
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+                <div className="animate-spin h-8 w-8 border-4 border-violet-600 border-t-transparent rounded-full mb-4"></div>
+                <p className="text-muted-foreground mb-4">Redirecting...</p>
+                <button 
+                    onClick={logout}
+                    className="text-sm text-violet-600 hover:underline"
+                >
+                    Sign out instead
+                </button>
+            </div>
+        );
     }
 
     const handleSubmit = async (e: React.FormEvent) => {

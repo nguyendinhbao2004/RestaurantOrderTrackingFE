@@ -28,7 +28,7 @@ export const menuItems: MenuItem[] = [
         description: 'Succulent shrimp sautéed in garlic butter with herbs',
         price: 12.99,
         category: 'appetizers',
-        image: 'https://images.unsplash.com/photo-1565680018434-b513d5e5671f?w=400',
+        image: 'https://images.unsplash.com/photo-1625943553852-781c6dd46faa?w=400',
         isAvailable: true,
         preparationTime: 12,
     },
