@@ -78,40 +78,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const isAuthenticated = user !== null;
 
-    const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-        // Find employee by email
-        const employee = employees.find(
-            (emp) => emp.email.toLowerCase() === email.toLowerCase() && emp.isActive
-        );
-
-        if (!employee) {
-            return { success: false, error: 'User not found' };
+    const login = useCallback(async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const res = await fetch("http://localhost:5015/api/Auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ userName: username, password }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.succeeded) {
+                return { success: false, error: data.message || "Login failed" };
+            }
+            // Extract user info and tokens
+            const { accessToken, refreshToken, userName, role, id } = data.data;
+            const authUser = {
+                id: data.data.id,
+                name: data.data.userName,
+                email: username, // If you want to store username in email field, or add a username field to User type
+                role: data.data.role.toLowerCase(),
+                avatar: undefined, // Optionally map avatar if provided by API
+            };
+            // Store accessToken (optionally refreshToken)
+            setToken(accessToken);
+            setUser(authUser);
+            // Redirect based on role
+            router.push(roleRedirectPaths[authUser.role as Role]);
+            return { success: true };
+        } catch (err: any) {
+            return { success: false, error: err.message || "Network error" };
         }
-
-        // Check password (demo only)
-        const expectedPassword = demoPasswords[email.toLowerCase()];
-        if (!expectedPassword || password !== expectedPassword) {
-            return { success: false, error: 'Invalid password' };
-        }
-
-        // Create user object
-        const authUser: User = {
-            id: employee.id,
-            name: employee.name,
-            email: employee.email,
-            role: employee.role,
-            avatar: employee.avatar,
-        };
-
-        // Create and store token
-        const token = createToken(authUser);
-        setToken(token);
-        setUser(authUser);
-
-        // Redirect based on role
-        router.push(roleRedirectPaths[employee.role]);
-
-        return { success: true };
     }, [router]);
 
     const logout = useCallback(() => {

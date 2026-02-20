@@ -1,0 +1,46 @@
+import { useEffect, useState } from "react";
+
+export interface TableApi {
+  id: string;
+  tableNumber: string;
+  areaName: string;
+  status: string;
+}
+
+export interface TableApiResponse {
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+  totalRecords: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+  data: TableApi[];
+  succeeded: boolean;
+  message: string;
+  errors: string[];
+}
+
+export function useTableApi(pageIndex: number, pageSize: number) {
+  const [data, setData] = useState<TableApiResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetch(
+      `http://localhost:5015/api/Table?PageIndex=${pageIndex}&PageSize=${pageSize}`
+    )
+      .then((res) => res.json())
+      .then((json) => {
+        setData(json);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message || "Failed to fetch tables");
+        setLoading(false);
+      });
+  }, [pageIndex, pageSize]);
+
+  return { data, loading, error };
+}

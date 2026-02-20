@@ -7,7 +7,7 @@ import { getTableStatusColor } from "@/lib/mock-data";
 import { TableQRCode } from "@/components/tables/TableQRCode";
 
 interface TableCardProps {
-    table: Table;
+    table: Table & { tableNumber?: string };
     onClick?: () => void;
     showQR?: boolean;
 }
@@ -21,6 +21,9 @@ const statusLabels: Record<TableStatus, string> = {
 
 export function TableCard({ table, onClick, showQR = true }: TableCardProps) {
     const statusColor = getTableStatusColor(table.status);
+
+    // Prefer table.tableNumber if present, else fallback to table.number
+    const displayTableNumber = table.tableNumber || table.number;
 
     return (
         <Card
@@ -38,7 +41,7 @@ export function TableCard({ table, onClick, showQR = true }: TableCardProps) {
                         <div
                             className={`w-3 h-3 rounded-full ${statusColor} animate-pulse`}
                         />
-                        <span className="font-bold text-lg">Table {table.number}</span>
+                        <span className="font-bold text-lg">Table {displayTableNumber}</span>
                     </div>
                     <Badge variant="outline" className="text-xs">
                         {table.capacity} seats

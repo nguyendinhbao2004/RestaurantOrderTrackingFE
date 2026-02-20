@@ -45,7 +45,7 @@ export interface Order {
 
 export interface Table {
     id: string;
-    number: number;
+    number: string;
     capacity: number;
     status: TableStatus;
     currentOrderId?: string;

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
-    const [email, setEmail] = useState("");
+    const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +46,7 @@ export default function LoginPage() {
         setError("");
         setIsLoading(true);
 
-        const result = await login(email, password);
+        const result = await login(username, password);
 
         if (!result.success) {
             setError(result.error || "Login failed");
@@ -56,14 +56,14 @@ export default function LoginPage() {
     };
 
     const demoAccounts = [
-        { email: "john.anderson@restaurant.com", password: "admin123", role: "Admin" },
-        { email: "maria.garcia@restaurant.com", password: "chef123", role: "Chef" },
-        { email: "sarah.johnson@restaurant.com", password: "waiter123", role: "Waiter" },
-        { email: "emily.davis@restaurant.com", password: "cashier123", role: "Cashier" },
+        { username: "baond", password: "admin123", role: "Admin" },
+        { username: "chef1", password: "chef123", role: "Chef" },
+        { username: "waiter1", password: "waiter123", role: "Waiter" },
+        { username: "cashier1", password: "cashier123", role: "Cashier" },
     ];
 
-    const fillDemoCredentials = (email: string, password: string) => {
-        setEmail(email);
+    const fillDemoCredentials = (username: string, password: string) => {
+        setUsername(username);
         setPassword(password);
         setError("");
     };
@@ -99,12 +99,12 @@ export default function LoginPage() {
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="text-sm font-medium mb-2 block">Email</label>
+                                <label className="text-sm font-medium mb-2 block">Username</label>
                                 <Input
-                                    type="email"
-                                    placeholder="Enter your email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    type="text"
+                                    placeholder="Enter your username"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
                                     required
                                 />
                             </div>
@@ -171,16 +171,16 @@ export default function LoginPage() {
                         <div className="grid grid-cols-2 gap-2">
                             {demoAccounts.map((account) => (
                                 <Button
-                                    key={account.email}
+                                    key={account.username}
                                     variant="outline"
                                     size="sm"
                                     className="text-xs h-auto py-2"
-                                    onClick={() => fillDemoCredentials(account.email, account.password)}
+                                    onClick={() => fillDemoCredentials(account.username, account.password)}
                                 >
                                     <div className="text-left">
                                         <div className="font-medium">{account.role}</div>
                                         <div className="text-muted-foreground truncate text-[10px]">
-                                            {account.email.split("@")[0]}
+                                            {account.username}
                                         </div>
                                     </div>
                                 </Button>

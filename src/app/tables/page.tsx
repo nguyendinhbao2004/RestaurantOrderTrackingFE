@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTableApi } from "@/hooks/useTableApi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,36 +35,37 @@ const statusFilters: { value: TableStatus | "all"; label: string }[] = [
 ];
 
 export default function TablesPage() {
-    const { tables, updateTableStatus } = useTable();
-    const { orders } = useOrder();
+    // Remove useTable, useOrder for now, use API instead
     const { user, logout, isAuthenticated } = useAuth();
-    const [selectedTable, setSelectedTable] = useState<Table | null>(null);
-    const [filter, setFilter] = useState<TableStatus | "all">("all");
-    const [newStatus, setNewStatus] = useState<TableStatus | "">("");
+    const [selectedTable, setSelectedTable] = useState<any | null>(null);
+    const [filter, setFilter] = useState<string>("all");
+    const [newStatus, setNewStatus] = useState<string>("");
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
+    const { data, loading, error } = useTableApi(page, pageSize);
 
-    const filteredTables =
-        filter === "all"
-            ? tables
-            : tables.filter((table) => table.status === filter);
+    // Filter tables by status
+    const filteredTables = data?.data
+        ? filter === "all"
+            ? data.data
+            : data.data.filter((table) => table.status.toLowerCase() === filter)
+        : [];
 
-    const tableOrder = selectedTable?.currentOrderId
-        ? orders.find((o) => o.id === selectedTable.currentOrderId)
-        : null;
+    // Dummy for tableOrder (API does not provide order info)
+    const tableOrder = null;
 
+    // Dummy for updateTableStatus (API does not provide update)
     const handleStatusUpdate = () => {
-        if (selectedTable && newStatus) {
-            updateTableStatus(selectedTable.id, newStatus);
-            setSelectedTable(null);
-            setNewStatus("");
-        }
+        setSelectedTable(null);
+        setNewStatus("");
     };
 
+    // Status counts (API does not provide, so count from filtered data)
     const statusCounts = {
-        available: tables.filter((t) => t.status === "available").length,
-        occupied: tables.filter((t) => t.status === "occupied").length,
-        "waiting-food": tables.filter((t) => t.status === "waiting-food").length,
-        "waiting-payment": tables.filter((t) => t.status === "waiting-payment")
-            .length,
+        available: data?.data.filter((t) => t.status.toLowerCase() === "available").length || 0,
+        occupied: data?.data.filter((t) => t.status.toLowerCase() === "occupied").length || 0,
+        "waiting-food": data?.data.filter((t) => t.status.toLowerCase() === "waiting-food").length || 0,
+        "waiting-payment": data?.data.filter((t) => t.status.toLowerCase() === "waiting-payment").length || 0,
     };
 
     return (
@@ -143,23 +145,58 @@ export default function TablesPage() {
                 </div>
 
                 {/* Table Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {filteredTables.map((table) => (
-                        <TableCard
-                            key={table.id}
-                            table={table}
-                            onClick={() => {
-                                setSelectedTable(table);
-                                setNewStatus(table.status);
-                            }}
-                        />
-                    ))}
-                </div>
-
-                {filteredTables.length === 0 && (
-                    <div className="text-center py-12 text-muted-foreground">
-                        No tables found with the selected filter.
-                    </div>
+                {loading ? (
+                    <div className="text-center py-12 text-muted-foreground">Loading tables...</div>
+                ) : error ? (
+                    <div className="text-center py-12 text-destructive">{error}</div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            {filteredTables.map((table) => (
+                                <TableCard
+                                    key={table.id}
+                                    table={{
+                                        ...table,
+                                        tableNumber: table.tableNumber,
+                                        number: table.tableNumber, // fallback for legacy Table type, not used for display
+                                        status: table.status.toLowerCase() as TableStatus,
+                                        capacity: 0, // Not provided by API
+                                        positionX: 0,
+                                        positionY: 0,
+                                    }}
+                                    onClick={() => {
+                                        setSelectedTable(table);
+                                        setNewStatus(table.status.toLowerCase() as TableStatus);
+                                    }}
+                                />
+                            ))}
+                        </div>
+                        {filteredTables.length === 0 && (
+                            <div className="text-center py-12 text-muted-foreground">
+                                No tables found with the selected filter.
+                            </div>
+                        )}
+                        {/* Pagination Controls */}
+                        <div className="flex justify-center gap-2 mt-8">
+                            <Button
+                                variant="outline"
+                                disabled={page === 1 || loading}
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            >
+                                Previous
+                            </Button>
+                            <span className="px-4 py-2 text-sm">
+                                Page {data?.pageNumber || 1} of {data?.totalPages || 1}
+                            </span>
+                            <Button
+                                variant="outline"
+                                disabled={!data?.hasNextPage || loading}
+                                onClick={() => setPage((p) => p + 1)}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </>
                 )}
             </div>
 
@@ -178,31 +215,7 @@ export default function TablesPage() {
 
                     <div className="space-y-4 py-4">
                         {/* Current Order Info */}
-                        {tableOrder && (
-                            <div className="bg-muted/50 rounded-lg p-4">
-                                <h4 className="font-medium mb-2">Current Order</h4>
-                                <div className="space-y-1 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Order ID:</span>
-                                        <span>{tableOrder.id}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Status:</span>
-                                        <Badge variant="outline">{tableOrder.status}</Badge>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Total:</span>
-                                        <span className="font-semibold">
-                                            {formatCurrency(tableOrder.totalAmount)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-muted-foreground">Time:</span>
-                                        <span>{formatDate(tableOrder.createdAt)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {/* No tableOrder info from API, so nothing to show here */}
 
                         {/* Status Update */}
                         <div>
