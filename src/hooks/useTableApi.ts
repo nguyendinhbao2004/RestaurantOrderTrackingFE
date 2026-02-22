@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from "@/lib/api-config";
 
 export interface TableApi {
   id: string;
@@ -29,7 +30,7 @@ export function useTableApi(pageIndex: number, pageSize: number) {
     setLoading(true);
     setError(null);
     fetch(
-      `http://localhost:5015/api/Table?PageIndex=${pageIndex}&PageSize=${pageSize}`
+      `${API_BASE_URL}/api/Table?PageIndex=${pageIndex}&PageSize=${pageSize}`
     )
       .then((res) => res.json())
       .then((json) => {

@@ -3,9 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, Role } from '@/types';
-import { employees } from '@/lib/mock-data';
 import {
-    createToken,
     getToken,
     setToken,
     removeToken,
@@ -14,27 +12,20 @@ import {
     hasRouteAccess,
     isPublicRoute,
 } from '@/lib/auth';
+import { loginApi } from '@/services/auth.service';
 
 interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
     logout: () => void;
     hasPermission: (allowedRoles: Role[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo passwords for each employee (in real app, this would be backend)
-const demoPasswords: Record<string, string> = {
-    'john.anderson@restaurant.com': 'admin123',
-    'maria.garcia@restaurant.com': 'chef123',
-    'david.chen@restaurant.com': 'chef123',
-    'sarah.johnson@restaurant.com': 'waiter123',
-    'michael.brown@restaurant.com': 'waiter123',
-    'emily.davis@restaurant.com': 'cashier123',
-};
+const REFRESH_TOKEN_KEY = 'restaurant_refresh_token';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -51,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(storedUser);
             } else {
                 removeToken();
+                localStorage.removeItem(REFRESH_TOKEN_KEY);
             }
         }
         setIsLoading(false);
@@ -80,34 +72,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = useCallback(async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
         try {
-            const res = await fetch("http://localhost:5015/api/Auth/login", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ userName: username, password }),
-            });
-            const data = await res.json();
-            if (!res.ok || !data.succeeded) {
-                return { success: false, error: data.message || "Login failed" };
-            }
-            // Extract user info and tokens
-            const { accessToken, refreshToken, userName, role, id } = data.data;
-            const authUser = {
-                id: data.data.id,
-                name: data.data.userName,
-                email: username, // If you want to store username in email field, or add a username field to User type
-                role: data.data.role.toLowerCase(),
-                avatar: undefined, // Optionally map avatar if provided by API
+            const response = await loginApi({ userName: username, password });
+            const { accessToken, refreshToken, role, id } = response.data;
+
+            // Map API response to User object
+            const authUser: User = {
+                id,
+                name: response.data.userName,
+                email: username,
+                role: role.toLowerCase() as Role,
+                avatar: undefined,
             };
-            // Store accessToken (optionally refreshToken)
+
+            // Store tokens
             setToken(accessToken);
+            localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+
             setUser(authUser);
+
             // Redirect based on role
-            router.push(roleRedirectPaths[authUser.role as Role]);
+            router.push(roleRedirectPaths[authUser.role]);
             return { success: true };
-        } catch (err: any) {
-            return { success: false, error: err.message || "Network error" };
+        } catch (err: unknown) {
+            const error = err as { message?: string };
+            return { success: false, error: error.message || "Network error" };
         }
     }, [router]);
 
