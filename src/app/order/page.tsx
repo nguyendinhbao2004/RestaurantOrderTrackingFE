@@ -8,9 +8,12 @@ import { MenuCard } from "@/components/order/MenuCard";
 import { Cart } from "@/components/order/Cart";
 import { TableSelector } from "@/components/order/TableSelector";
 import { OrderStatusDisplay } from "@/components/order/OrderStatus";
+import { VoiceOrderButton } from "@/components/order/VoiceOrderButton";
+import { VoiceOrderFeedback } from "@/components/order/VoiceOrderFeedback";
 import { menuItems } from "@/lib/mock-data";
 import { MenuCategory, Order } from "@/types";
 import { useOrder } from "@/contexts/OrderContext";
+import { useVoiceOrder } from "@/hooks/useVoiceOrder";
 import {
     Dialog,
     DialogContent,
@@ -35,6 +38,19 @@ export default function OrderPage() {
     const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
     const [showOrderStatus, setShowOrderStatus] = useState(false);
     const { placeOrder } = useOrder();
+
+    const {
+        isListening,
+        isSupported,
+        isProcessing,
+        transcript,
+        interimTranscript,
+        matchedItems,
+        error,
+        toggleListening,
+        stopListening,
+        clearResults,
+    } = useVoiceOrder();
 
     const filteredItems =
         selectedCategory === "all"
@@ -75,7 +91,14 @@ export default function OrderPage() {
                                 </p>
                             </div>
                         </div>
-                        <TableSelector />
+                        <div className="flex items-center gap-3">
+                            <VoiceOrderButton
+                                isListening={isListening}
+                                isSupported={isSupported}
+                                onToggle={toggleListening}
+                            />
+                            <TableSelector />
+                        </div>
                     </div>
                 </div>
             </header>
@@ -85,6 +108,20 @@ export default function OrderPage() {
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Menu Section */}
                     <div className="flex-1">
+                        {/* Voice Order Feedback */}
+                        <div className="mb-6">
+                            <VoiceOrderFeedback
+                                isListening={isListening}
+                                isProcessing={isProcessing}
+                                transcript={transcript}
+                                interimTranscript={interimTranscript}
+                                matchedItems={matchedItems}
+                                error={error}
+                                onStop={stopListening}
+                                onClear={clearResults}
+                            />
+                        </div>
+
                         <Tabs
                             value={selectedCategory}
                             onValueChange={(v) =>
@@ -137,3 +174,4 @@ export default function OrderPage() {
         </div>
     );
 }
+
