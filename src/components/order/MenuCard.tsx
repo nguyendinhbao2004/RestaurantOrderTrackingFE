@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MenuItem } from "@/types";
-import { formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/helpers";
 import { useOrder } from "@/contexts/OrderContext";
 
 interface MenuCardProps {

@@ -24,7 +24,7 @@ import { useTable } from "@/contexts/TableContext";
 import { useOrder } from "@/contexts/OrderContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Table, TableStatus } from "@/types";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/helpers";
 
 const statusFilters: { value: TableStatus | "all"; label: string }[] = [
     { value: "all", label: "All Tables" },

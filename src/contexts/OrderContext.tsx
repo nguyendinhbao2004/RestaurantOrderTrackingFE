@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { CartItem, MenuItem, Order, OrderStatus } from '@/types';
-import { orders as initialOrders } from '@/lib/mock-data';
 
 interface OrderContextType {
     cart: CartItem[];
@@ -23,7 +22,7 @@ const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
 export function OrderProvider({ children }: { children: ReactNode }) {
     const [cart, setCart] = useState<CartItem[]>([]);
-    const [orders, setOrders] = useState<Order[]>(initialOrders);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [selectedTable, setSelectedTable] = useState<string | null>(null);
 
     const addToCart = useCallback((item: MenuItem, quantity: number = 1, notes?: string) => {

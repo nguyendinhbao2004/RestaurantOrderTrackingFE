@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-    dailyRevenue,
-    weeklyRevenue,
-    monthlyRevenue,
-    formatCurrency,
-} from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/helpers";
+import { RevenueData } from "@/types";
+
+const dailyRevenue: RevenueData[] = [];
+const weeklyRevenue: RevenueData[] = [];
+const monthlyRevenue: RevenueData[] = [];
 
 type Period = "daily" | "weekly" | "monthly";
 
@@ -22,10 +22,10 @@ export default function RevenuePage() {
     };
 
     const currentData = revenueData[period];
-    const totalRevenue = currentData.reduce((sum, d) => sum + d.revenue, 0);
-    const totalOrders = currentData.reduce((sum, d) => sum + d.orders, 0);
-    const avgOrderValue = totalRevenue / totalOrders;
-    const maxRevenue = Math.max(...currentData.map((d) => d.revenue));
+    const totalRevenue = currentData.reduce((sum: number, d: RevenueData) => sum + d.revenue, 0);
+    const totalOrders = currentData.reduce((sum: number, d: RevenueData) => sum + d.orders, 0);
+    const avgOrderValue = totalRevenue / totalOrders || 0;
+    const maxRevenue = currentData.length > 0 ? Math.max(...currentData.map((d: RevenueData) => d.revenue)) : 0;
 
     const periodLabels = {
         daily: "Last 7 Days",
@@ -105,7 +105,7 @@ export default function RevenuePage() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {currentData.slice(-10).map((data, index) => {
+                                {currentData.slice(-10).map((data: RevenueData, index: number) => {
                                     const percentage = (data.revenue / maxRevenue) * 100;
                                     return (
                                         <div key={index} className="space-y-2">
@@ -158,7 +158,7 @@ export default function RevenuePage() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {currentData.slice(-10).reverse().map((data, index) => (
+                                        {currentData.slice(-10).reverse().map((data: RevenueData, index: number) => (
                                             <tr
                                                 key={index}
                                                 className="border-b border-border hover:bg-muted/50 transition-colors"

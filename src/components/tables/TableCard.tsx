@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableStatus } from "@/types";
-import { getTableStatusColor } from "@/lib/mock-data";
+import { getTableStatusColor } from "@/lib/helpers";
 import { TableQRCode } from "@/components/tables/TableQRCode";
 
 interface TableCardProps {

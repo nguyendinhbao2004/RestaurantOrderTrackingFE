@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { Table, TableStatus } from '@/types';
-import { tables as initialTables } from '@/lib/mock-data';
 
 interface TableContextType {
     tables: Table[];
@@ -15,7 +14,7 @@ interface TableContextType {
 const TableContext = createContext<TableContextType | undefined>(undefined);
 
 export function TableProvider({ children }: { children: ReactNode }) {
-    const [tables, setTables] = useState<Table[]>(initialTables);
+    const [tables, setTables] = useState<Table[]>([]);
 
     const updateTableStatus = useCallback((tableId: string, status: TableStatus, orderId?: string) => {
         setTables((prevTables) =>
