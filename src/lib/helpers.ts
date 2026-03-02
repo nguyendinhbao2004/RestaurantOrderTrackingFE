@@ -5,19 +5,6 @@
 import { Product, MenuItem, MenuCategory } from '@/types';
 
 /**
- * Extract unique categories from products array
- */
-export const extractUniqueCategories = (products: Product[]): string[] => {
-    const categories = new Set<string>();
-    products.forEach(product => {
-        if (product.categoryName) {
-            categories.add(product.categoryName);
-        }
-    });
-    return Array.from(categories).sort();
-};
-
-/**
  * Map Product from API to MenuItem for UI
  */
 export const mapProductToMenuItem = (product: Product): MenuItem => {
