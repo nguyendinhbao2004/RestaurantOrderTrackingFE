@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { MenuItem } from "@/types";
-import { menuItems } from "@/lib/mock-data";
 import { useOrder } from "@/contexts/OrderContext";
 
 // ==================== TYPES ====================
@@ -11,6 +10,10 @@ export interface MatchedItem {
     menuItem: MenuItem;
     quantity: number;
     addedToCart: boolean;
+}
+
+interface UseVoiceOrderParams {
+    menuItems: MenuItem[];
 }
 
 interface UseVoiceOrderReturn {
@@ -27,7 +30,7 @@ interface UseVoiceOrderReturn {
     clearResults: () => void;
 }
 
-// ==================== LOCAL FALLBACK MATCHING ====================
+// ==================== HELPER CONSTANTS ====================
 
 const NUMBER_WORDS: Record<string, number> = {
     one: 1, a: 1, an: 1,
@@ -76,86 +79,9 @@ function levenshteinDistance(a: string, b: string): number {
     return matrix[b.length][a.length];
 }
 
-function localFuzzyMatch(transcript: string): MatchedItem[] {
-    const normalized = normalizeString(transcript);
-    const matched: MatchedItem[] = [];
-    const alreadyMatched = new Set<string>();
-    const segments = normalized.split(/\b(?:and|also|plus|with)\b/);
-
-    for (const segment of segments) {
-        const trimmed = segment.trim();
-        if (!trimmed) continue;
-        let bestMatch: MenuItem | null = null;
-        let bestScore = 0;
-
-        for (const item of menuItems) {
-            if (!item.isAvailable || alreadyMatched.has(item.id)) continue;
-            const itemNorm = normalizeString(item.name);
-            const segWords = trimmed.split(" ");
-            const itemWords = itemNorm.split(" ");
-
-            // Contains match
-            if (trimmed.includes(itemNorm) || itemNorm.includes(trimmed)) {
-                if (0.9 > bestScore) { bestScore = 0.9; bestMatch = item; }
-                continue;
-            }
-
-            // Keyword match
-            const keywordScore = itemWords.filter((kw) =>
-                segWords.some((sw) => sw.includes(kw) || kw.includes(sw) || levenshteinDistance(kw, sw) <= 2)
-            ).length / itemWords.length;
-
-            if (keywordScore * 0.85 > bestScore && keywordScore * 0.85 >= 0.45) {
-                bestScore = keywordScore * 0.85;
-                bestMatch = item;
-            }
-        }
-
-        if (bestMatch) {
-            alreadyMatched.add(bestMatch.id);
-            matched.push({ menuItem: bestMatch, quantity: parseQuantity(trimmed), addedToCart: false });
-        }
-    }
-
-    return matched;
-}
-
-// ==================== GEMINI API CALL ====================
-
-async function callGeminiAPI(transcript: string): Promise<MatchedItem[]> {
-    const response = await fetch("/api/voice-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transcript }),
-    });
-
-    if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "API request failed");
-    }
-
-    const data = await response.json();
-    const items: MatchedItem[] = [];
-
-    if (data.items && Array.isArray(data.items)) {
-        for (const item of data.items) {
-            const menuItem = menuItems.find((m) => m.id === item.id);
-            if (menuItem) {
-                items.push({
-                    menuItem,
-                    quantity: item.quantity || 1,
-                    addedToCart: false,
-                });
-            }
-        }
-    }
-
-    return items;
-}
-
 // ==================== HOOK ====================
 
-export function useVoiceOrder(): UseVoiceOrderReturn {
+export function useVoiceOrder({ menuItems }: UseVoiceOrderParams): UseVoiceOrderReturn {
     const { addToCart } = useOrder();
     const [isListening, setIsListening] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -175,6 +101,85 @@ export function useVoiceOrder(): UseVoiceOrderReturn {
             if (recognitionRef.current) recognitionRef.current.abort();
         };
     }, []);
+
+    // ==================== LOCAL FALLBACK MATCHING ====================
+    
+    const localFuzzyMatch = useCallback((transcript: string): MatchedItem[] => {
+        const normalized = normalizeString(transcript);
+        const matched: MatchedItem[] = [];
+        const alreadyMatched = new Set<string>();
+        const segments = normalized.split(/\b(?:and|also|plus|with)\b/);
+
+        for (const segment of segments) {
+            const trimmed = segment.trim();
+            if (!trimmed) continue;
+            let bestMatch: MenuItem | null = null;
+            let bestScore = 0;
+
+            for (const item of menuItems) {
+                if (!item.isAvailable || alreadyMatched.has(item.id)) continue;
+                const itemNorm = normalizeString(item.name);
+                const segWords = trimmed.split(" ");
+                const itemWords = itemNorm.split(" ");
+
+                // Contains match
+                if (trimmed.includes(itemNorm) || itemNorm.includes(trimmed)) {
+                    if (0.9 > bestScore) { bestScore = 0.9; bestMatch = item; }
+                    continue;
+                }
+
+                // Keyword match
+                const keywordScore = itemWords.filter((kw) =>
+                    segWords.some((sw) => sw.includes(kw) || kw.includes(sw) || levenshteinDistance(kw, sw) <= 2)
+                ).length / itemWords.length;
+
+                if (keywordScore * 0.85 > bestScore && keywordScore * 0.85 >= 0.45) {
+                    bestScore = keywordScore * 0.85;
+                    bestMatch = item;
+                }
+            }
+
+            if (bestMatch) {
+                alreadyMatched.add(bestMatch.id);
+                matched.push({ menuItem: bestMatch, quantity: parseQuantity(trimmed), addedToCart: false });
+            }
+        }
+
+        return matched;
+    }, [menuItems]);
+
+    // ==================== GEMINI API CALL ====================
+
+    const callGeminiAPI = useCallback(async (transcript: string): Promise<MatchedItem[]> => {
+        const response = await fetch("/api/voice-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ transcript }),
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || "API request failed");
+        }
+
+        const data = await response.json();
+        const items: MatchedItem[] = [];
+
+        if (data.items && Array.isArray(data.items)) {
+            for (const item of data.items) {
+                const menuItem = menuItems.find((m) => m.id === item.id);
+                if (menuItem) {
+                    items.push({
+                        menuItem,
+                        quantity: item.quantity || 1,
+                        addedToCart: false,
+                    });
+                }
+            }
+        }
+
+        return items;
+    }, [menuItems]);
 
     const processTranscript = useCallback(
         async (finalTranscript: string) => {
@@ -204,7 +209,7 @@ export function useVoiceOrder(): UseVoiceOrderReturn {
 
             setIsProcessing(false);
         },
-        [addToCart]
+        [addToCart, callGeminiAPI, localFuzzyMatch]
     );
 
     const startListening = useCallback(() => {

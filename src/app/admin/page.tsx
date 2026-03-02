@@ -2,14 +2,19 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-    dashboardStats,
-    popularDishes,
-    formatCurrency,
-    orders,
-    formatDate,
-    getOrderStatusColor,
-} from "@/lib/mock-data";
+import { formatCurrency, formatDate, getOrderStatusColor } from "@/lib/helpers";
+import { Order, DashboardStats, PopularDish } from "@/types";
+
+const dashboardStats: DashboardStats = {
+    totalOrders: 0,
+    totalRevenue: 0,
+    averageOrderValue: 0,
+    tablesOccupied: 0,
+    pendingOrders: 0,
+};
+
+const popularDishes: PopularDish[] = [];
+const orders: Order[] = [];
 
 export default function AdminDashboardPage() {
     const recentOrders = orders.slice(-5).reverse();
@@ -153,7 +158,7 @@ export default function AdminDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {popularDishes.map((dish, index) => (
+                            {popularDishes.map((dish: PopularDish, index: number) => (
                                 <div
                                     key={dish.menuItem.id}
                                     className="flex items-center gap-4"
@@ -185,7 +190,7 @@ export default function AdminDashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            {recentOrders.map((order) => (
+                            {recentOrders.map((order: Order) => (
                                 <div key={order.id} className="flex items-center gap-4">
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium">Order #{order.id}</p>

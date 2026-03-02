@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrder } from "@/contexts/OrderContext";
 import { useTable } from "@/contexts/TableContext";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/helpers";
 
 export default function CashierPage() {
     const { user, logout } = useAuth();

@@ -6,7 +6,7 @@ export type OrderStatus = 'pending' | 'cooking' | 'ready' | 'served' | 'cancelle
 
 export type TableStatus = 'available' | 'occupied' | 'waiting-food' | 'waiting-payment';
 
-export type MenuCategory = 'appetizers' | 'main-courses' | 'desserts' | 'beverages' | 'specials';
+export type MenuCategory = 'appetizers' | 'main-courses' | 'desserts' | 'beverages' | 'specials' | 'salads';
 
 // ==================== MENU ====================
 
@@ -15,7 +15,8 @@ export interface MenuItem {
     name: string;
     description: string;
     price: number;
-    category: MenuCategory;
+    category: MenuCategory;      
+    categoryName: string;     
     image: string;
     isAvailable: boolean;
     preparationTime: number; // in minutes
@@ -110,4 +111,21 @@ export interface User {
     email: string;
     role: Role;
     avatar?: string;
+}
+
+// ==================== PRODUCT ====================
+export interface Product {
+    id: string;
+    name: string;
+    description?: string;
+    price: number;
+    imageUrl?: string | null;
+    categoryName: string;
+    isActive: string | boolean;
+}
+
+export interface ProductListParams {
+    keyword?: string;
+    pageIndex?: number;
+    pageSize?: number;
 }

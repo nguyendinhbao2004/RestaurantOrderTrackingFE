@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/helpers";
 import { MatchedItem } from "@/hooks/useVoiceOrder";
 
 interface VoiceOrderFeedbackProps {

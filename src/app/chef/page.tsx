@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrder } from "@/contexts/OrderContext";
-import { getOrderStatusColor, formatDate, formatCurrency } from "@/lib/mock-data";
+import { getOrderStatusColor, formatDate, formatCurrency } from "@/lib/helpers";
 import { OrderStatus } from "@/types";
 
 const statusFlow: OrderStatus[] = ["pending", "cooking", "ready"];

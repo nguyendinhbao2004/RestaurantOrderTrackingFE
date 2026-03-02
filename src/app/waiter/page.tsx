@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrder } from "@/contexts/OrderContext";
 import { useTable } from "@/contexts/TableContext";
-import { getOrderStatusColor, getTableStatusColor, formatDate, formatCurrency } from "@/lib/mock-data";
+import { getOrderStatusColor, getTableStatusColor, formatDate, formatCurrency } from "@/lib/helpers";
 
 export default function WaiterPage() {
     const { user, logout } = useAuth();

@@ -21,7 +21,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { employees as initialEmployees } from "@/lib/mock-data";
 import { Employee, Role } from "@/types";
 
 const roleColors: Record<Role, string> = {
@@ -32,7 +31,7 @@ const roleColors: Record<Role, string> = {
 };
 
 export default function EmployeesPage() {
-    const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+    const [employees, setEmployees] = useState<Employee[]>([]);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
     const [formData, setFormData] = useState({

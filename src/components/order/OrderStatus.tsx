@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Order, OrderStatus } from "@/types";
-import { formatCurrency, formatDate } from "@/lib/mock-data";
+import { formatCurrency, formatDate } from "@/lib/helpers";
 
 interface OrderStatusDisplayProps {
     order: Order | null;

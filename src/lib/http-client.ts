@@ -8,10 +8,24 @@ import { getToken } from "@/lib/auth";
 
 // ==================== TYPES ====================
 
+export interface Pagination {
+    pageNumber: number;
+    pageSize: number;
+    totalPages: number;
+    totalRecords: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+}
+
+export interface Meta {
+    pagination?: Pagination;
+}
+
 export interface ApiResponse<T = unknown> {
-    data: T;
     succeeded: boolean;
     message: string;
+    data: T;
+    meta?: Meta;
     errors: string[];
 }
 
