@@ -41,6 +41,7 @@ export const mapProductToMenuItem = (product: Product): MenuItem => {
         description: product.description || '',
         price: product.price,
         category,
+        categoryName: product.categoryName, 
         image: product.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400',
         isAvailable: product.isActive === 'True' || product.isActive === true,
         preparationTime: 15, // Default value, adjust if API provides this

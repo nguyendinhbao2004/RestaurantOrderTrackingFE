@@ -1,177 +1,321 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { MenuCard } from "@/components/order/MenuCard";
 import { Cart } from "@/components/order/Cart";
 import { TableSelector } from "@/components/order/TableSelector";
 import { OrderStatusDisplay } from "@/components/order/OrderStatus";
 import { VoiceOrderButton } from "@/components/order/VoiceOrderButton";
 import { VoiceOrderFeedback } from "@/components/order/VoiceOrderFeedback";
-import { menuItems } from "@/lib/mock-data";
-import { MenuCategory, Order } from "@/types";
+import { Order, MenuItem } from "@/types";
 import { useOrder } from "@/contexts/OrderContext";
 import { useVoiceOrder } from "@/hooks/useVoiceOrder";
+import { fetchProducts } from "@/services/product.service";
+import { mapProductsToMenuItems } from "@/lib/helpers";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-
-const categories: { value: MenuCategory | "all"; label: string }[] = [
-    { value: "all", label: "All Items" },
-    { value: "appetizers", label: "Appetizers" },
-    { value: "main-courses", label: "Main Courses" },
-    { value: "desserts", label: "Desserts" },
-    { value: "beverages", label: "Beverages" },
-    { value: "specials", label: "Specials" },
-];
+import { Loader2, AlertCircle } from "lucide-react";
 
 export default function OrderPage() {
-    const [selectedCategory, setSelectedCategory] = useState<
-        MenuCategory | "all"
-    >("all");
-    const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
-    const [showOrderStatus, setShowOrderStatus] = useState(false);
-    const { placeOrder } = useOrder();
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
+  const [showOrderStatus, setShowOrderStatus] = useState(false);
 
-    const {
-        isListening,
-        isSupported,
-        isProcessing,
-        transcript,
-        interimTranscript,
-        matchedItems,
-        error,
-        toggleListening,
-        stopListening,
-        clearResults,
-    } = useVoiceOrder();
+  // Pagination States
+  const [pageIndex, setPageIndex] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const PAGE_SIZE = 10;
 
-    const filteredItems =
-        selectedCategory === "all"
-            ? menuItems
-            : menuItems.filter((item) => item.category === selectedCategory);
+  // API States
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    const handlePlaceOrder = () => {
-        const order = placeOrder();
-        if (order) {
-            setCurrentOrder(order);
-            setShowOrderStatus(true);
-        }
-    };
+  const { placeOrder } = useOrder();
 
-    return (
-        <div className="min-h-screen bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
-            {/* Header */}
-            <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="icon" asChild>
-                                <Link href="/">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="m12 19-7-7 7-7" />
-                                        <path d="M19 12H5" />
-                                    </svg>
-                                </Link>
-                            </Button>
-                            <div>
-                                <h1 className="text-2xl font-bold">
-                                    <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                                        Restaurant Menu
-                                    </span>
-                                </h1>
-                                <p className="text-muted-foreground text-sm">
-                                    Select your dishes and place an order
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <VoiceOrderButton
-                                isListening={isListening}
-                                isSupported={isSupported}
-                                onToggle={toggleListening}
-                            />
-                            <TableSelector />
-                        </div>
-                    </div>
-                </div>
-            </header>
+  const {
+    isListening,
+    isSupported,
+    isProcessing,
+    transcript,
+    interimTranscript,
+    matchedItems,
+    error: voiceError,
+    toggleListening,
+    stopListening,
+    clearResults,
+  } = useVoiceOrder({ menuItems });
 
-            {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-6 py-8">
-                <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Menu Section */}
-                    <div className="flex-1">
-                        {/* Voice Order Feedback */}
-                        <div className="mb-6">
-                            <VoiceOrderFeedback
-                                isListening={isListening}
-                                isProcessing={isProcessing}
-                                transcript={transcript}
-                                interimTranscript={interimTranscript}
-                                matchedItems={matchedItems}
-                                error={error}
-                                onStop={stopListening}
-                                onClear={clearResults}
-                            />
-                        </div>
+  // Fetch products from API
+  const loadProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-                        <Tabs
-                            value={selectedCategory}
-                            onValueChange={(v) =>
-                                setSelectedCategory(v as MenuCategory | "all")
-                            }
-                        >
-                            <TabsList className="mb-6 flex-wrap h-auto gap-2 bg-transparent p-0">
-                                {categories.map((category) => (
-                                    <TabsTrigger
-                                        key={category.value}
-                                        value={category.value}
-                                        className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-full px-4"
-                                    >
-                                        {category.label}
-                                    </TabsTrigger>
-                                ))}
-                            </TabsList>
+      const response = await fetchProducts({
+        pageIndex,
+        pageSize: PAGE_SIZE,
+      });
 
-                            <TabsContent value={selectedCategory} className="mt-0">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                                    {filteredItems.map((item) => (
-                                        <MenuCard key={item.id} item={item} />
-                                    ))}
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </div>
+      const items = mapProductsToMenuItems(response.data);
+      setMenuItems(items);
 
-                    {/* Cart Sidebar */}
-                    <aside className="lg:w-80 xl:w-96">
-                        <div className="sticky top-24">
-                            <Cart onPlaceOrder={handlePlaceOrder} />
-                        </div>
-                    </aside>
-                </div>
+      const pagination = response.meta?.pagination;
+      if (pagination) {
+        setTotalPages(pagination.totalPages);
+      }
+    } catch (err) {
+      console.error("Error loading products:", err);
+      setError("Không thể tải danh sách món ăn. Vui lòng thử lại sau.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pageIndex]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  const categories = useMemo(() => {
+    const uniqueNames = Array.from(
+      new Set(menuItems.map((item) => item.categoryName)),
+    ).sort();
+
+    return [
+      { value: "all", label: "Tất cả" },
+      ...uniqueNames.map((name) => ({ value: name, label: name })),
+    ];
+  }, [menuItems]);
+
+  const filteredItems = useMemo(() => {
+    if (selectedCategory === "all") {
+      return menuItems;
+    }
+    return menuItems.filter((item) => item.categoryName === selectedCategory);
+  }, [menuItems, selectedCategory]);
+
+  const handlePlaceOrder = () => {
+    const order = placeOrder();
+    if (order) {
+      setCurrentOrder(order);
+      setShowOrderStatus(true);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m12 19-7-7 7-7" />
+                    <path d="M19 12H5" />
+                  </svg>
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold">
+                  <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                    Restaurant Menu
+                  </span>
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Select your dishes and place an order
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <VoiceOrderButton
+                isListening={isListening}
+                isSupported={isSupported}
+                onToggle={toggleListening}
+              />
+              <TableSelector />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Menu Section */}
+          <div className="flex-1">
+            {/* Voice Order Feedback */}
+            <div className="mb-6">
+              <VoiceOrderFeedback
+                isListening={isListening}
+                isProcessing={isProcessing}
+                transcript={transcript}
+                interimTranscript={interimTranscript}
+                matchedItems={matchedItems}
+                error={voiceError}
+                onStop={stopListening}
+                onClear={clearResults}
+              />
             </div>
 
-            {/* Order Status Dialog */}
-            <Dialog open={showOrderStatus} onOpenChange={setShowOrderStatus}>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Order Placed Successfully!</DialogTitle>
-                        <DialogDescription>
-                            Your order has been sent to the kitchen. Track its status below.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <OrderStatusDisplay order={currentOrder} />
-                </DialogContent>
-            </Dialog>
-        </div>
-    );
-}
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="h-12 w-12 animate-spin text-violet-600 mb-4" />
+                <p className="text-muted-foreground">Đang tải menu...</p>
+              </div>
+            )}
 
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 max-w-md">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                    <div>
+                      <h3 className="font-semibold text-destructive mb-1">
+                        Lỗi tải dữ liệu
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {error}
+                      </p>
+                      <Button
+                        onClick={() => window.location.reload()}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Thử lại
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Menu Items */}
+            {!isLoading && !error && (
+              <Tabs
+                value={selectedCategory}
+                onValueChange={(v) => setSelectedCategory(v)}
+              >
+                <TabsList className="mb-6 flex-wrap h-auto gap-2 bg-transparent p-0">
+                  {categories.map((category) => (
+                    <TabsTrigger
+                      key={category.value}
+                      value={category.value}
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-full px-4"
+                    >
+                      {category.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                <TabsContent value={selectedCategory} className="mt-0">
+                  {filteredItems.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground">
+                        Không có món ăn nào trong danh mục này.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {filteredItems.map((item) => (
+                        <MenuCard key={item.id} item={item} />
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-8">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageIndex((p) => Math.max(1, p - 1))}
+                      disabled={pageIndex === 1 || isLoading}
+                      className="h-9 w-9 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <Button
+                          key={page}
+                          variant={page === pageIndex ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPageIndex(page)}
+                          disabled={isLoading}
+                          className={`h-9 w-9 p-0 ${
+                            page === pageIndex
+                              ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white border-0 hover:from-violet-700 hover:to-purple-700"
+                              : ""
+                          }`}
+                        >
+                          {page}
+                        </Button>
+                      ),
+                    )}
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPageIndex((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={pageIndex === totalPages || isLoading}
+                      className="h-9 w-9 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </Tabs>
+            )}
+          </div>
+
+          {/* Cart Sidebar */}
+          <aside className="lg:w-80 xl:w-96">
+            <div className="sticky top-24">
+              <Cart onPlaceOrder={handlePlaceOrder} />
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      {/* Order Status Dialog */}
+      <Dialog open={showOrderStatus} onOpenChange={setShowOrderStatus}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Order Placed Successfully!</DialogTitle>
+            <DialogDescription>
+              Your order has been sent to the kitchen. Track its status below.
+            </DialogDescription>
+          </DialogHeader>
+          <OrderStatusDisplay order={currentOrder} />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

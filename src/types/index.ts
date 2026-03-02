@@ -15,7 +15,8 @@ export interface MenuItem {
     name: string;
     description: string;
     price: number;
-    category: MenuCategory;
+    category: MenuCategory;      
+    categoryName: string;     
     image: string;
     isAvailable: boolean;
     preparationTime: number; // in minutes
