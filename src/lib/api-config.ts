@@ -28,6 +28,11 @@ export const API_ENDPOINTS = {
         detail: (id: string) => `${API_BASE_URL}/api/Product/${id}`,
     },
 
+    // ==================== CATEGORIES ====================
+    categories: {
+        list: `${API_BASE_URL}/api/Category`,
+    },
+
     // ==================== ORDERS ====================
     orders: {
         list: `${API_BASE_URL}/api/Order`,
