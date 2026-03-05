@@ -68,6 +68,7 @@ export const roleRedirectPaths: Record<Role, string> = {
     chef: '/chef',
     waiter: '/waiter',
     cashier: '/cashier',
+    customer: '/customer',
 };
 
 // Protected routes and their allowed roles
@@ -79,15 +80,16 @@ export const protectedRoutes: Record<string, Role[]> = {
     '/waiter': ['waiter'],
     '/cashier': ['cashier'],
     '/tables': ['admin', 'waiter', 'cashier'],
+    '/customer': ['customer'],
 };
 
 // Public routes that don't require authentication
-export const publicRoutes = ['/', '/login', '/order'];
+export const publicRoutes = ['/', '/login', '/order', '/customer'];
 
 // Check if a route is public
 export function isPublicRoute(pathname: string): boolean {
     return publicRoutes.some(route =>
-        pathname === route || pathname.startsWith('/order')
+        pathname === route || pathname.startsWith('/order') || pathname.startsWith('/customer')
     );
 }
 

@@ -25,6 +25,15 @@ export interface RefreshTokenRequest {
     refreshToken: string;
 }
 
+export interface RegisterCustomerRequest {
+    userName: string;
+    fullName: string;
+    phone: string;
+    address: string;
+    password: string;
+    image: string;
+}
+
 // ==================== API CALLS ====================
 
 export async function loginApi(
@@ -52,4 +61,31 @@ export async function loginApi(
     }
 
     return data as ApiResponse<LoginResponseData>;
+}
+
+export async function registerCustomerApi(
+    data: RegisterCustomerRequest
+): Promise<ApiResponse<string>> {
+    const response = await fetch(API_ENDPOINTS.auth.registerCustomer, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+    });
+
+    const result = await response.json().catch(() => ({
+        succeeded: false,
+        message: "Failed to parse server response",
+        data: null,
+        errors: [],
+    }));
+
+    if (!response.ok || !result.succeeded) {
+        throw {
+            status: response.status,
+            message: result.message || "Registration failed",
+            errors: result.errors || [],
+        };
+    }
+
+    return result as ApiResponse<string>;
 }
