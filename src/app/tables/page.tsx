@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useTableApi } from "@/hooks/useTableApi";
-import { Badge } from "@/components/ui/badge";
+import { fetchTablesByArea, generateQrSession } from "@/services/table.service";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
     Dialog,
     DialogContent,
@@ -12,244 +14,316 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { TableCard } from "@/components/tables/TableCard";
-import { useTable } from "@/contexts/TableContext";
-import { useOrder } from "@/contexts/OrderContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { Table, TableStatus } from "@/types";
-import { formatCurrency, formatDate } from "@/lib/helpers";
+import { TableStatus } from "@/types";
+import {
+    ArrowLeft,
+    LogOut,
+    RefreshCw,
+    Users,
+    TableProperties,
+    UtensilsCrossed,
+    Clock,
+    CreditCard,
+    Download,
+} from "lucide-react";
 
 const statusFilters: { value: TableStatus | "all"; label: string }[] = [
-    { value: "all", label: "All Tables" },
-    { value: "available", label: "Available" },
-    { value: "occupied", label: "Occupied" },
-    { value: "waiting-food", label: "Waiting for Food" },
-    { value: "waiting-payment", label: "Waiting for Payment" },
+    { value: "all", label: "Tất cả" },
+    { value: "available", label: "Trống" },
+    { value: "occupied", label: "Có khách" },
+    { value: "waiting-food", label: "Chờ món" },
+    { value: "waiting-payment", label: "Chờ thanh toán" },
 ];
 
 export default function TablesPage() {
-    // Remove useTable, useOrder for now, use API instead
     const { user, logout, isAuthenticated } = useAuth();
     const [selectedTable, setSelectedTable] = useState<any | null>(null);
     const [filter, setFilter] = useState<string>("all");
-    const [newStatus, setNewStatus] = useState<string>("");
     const [page, setPage] = useState(1);
+    const [refreshing, setRefreshing] = useState(false);
+    const [generatingQRFor, setGeneratingQRFor] = useState<string | null>(null);
     const pageSize = 10;
-    const { data, loading, error } = useTableApi(page, pageSize);
 
-    // Filter tables by status
-    const filteredTables = data?.data
-        ? filter === "all"
-            ? data.data
-            : data.data.filter((table) => table.status.toLowerCase() === filter)
-        : [];
+    const isWaiter = !!user?.areaId;
 
-    // Dummy for tableOrder (API does not provide order info)
-    const tableOrder = null;
+    // Area-based tables (waiter)
+    const [areaTables, setAreaTables] = useState<any[]>([]);
+    const [areaLoading, setAreaLoading] = useState(false);
+    const [areaError, setAreaError] = useState<string | null>(null);
 
-    // Dummy for updateTableStatus (API does not provide update)
-    const handleStatusUpdate = () => {
-        setSelectedTable(null);
-        setNewStatus("");
+    const loadAreaTables = () => {
+        if (!user?.areaId) return;
+        setAreaLoading(true);
+        fetchTablesByArea(user.areaId)
+            .then((res) => setAreaTables(res.data))
+            .catch((err) => setAreaError(err.message || "Không thể tải danh sách bàn"))
+            .finally(() => setAreaLoading(false));
     };
 
-    // Status counts (API does not provide, so count from filtered data)
+    const handleDownloadQR = (base64: string, tableNumber: string) => {
+        const link = document.createElement("a");
+        link.href = `data:image/png;base64,${base64}`;
+        link.download = `QR-Ban-${tableNumber}.png`;
+        link.click();
+    };
+
+    const handleGenerateQR = async (tableId: string) => {
+        setGeneratingQRFor(tableId);
+        try {
+            const res = await generateQrSession(tableId);
+            const qrCodeBase64 = res.data.qrCodeBase64;
+            setAreaTables((prev) =>
+                prev.map((t) => t.id === tableId ? { ...t, qrCode: qrCodeBase64 } : t)
+            );
+            // Open dialog for this table to show the QR
+            setSelectedTable((prev: any) =>
+                prev?.id === tableId ? { ...prev, qrCode: qrCodeBase64 } : prev
+            );
+        } catch (err: any) {
+            console.error("Không thể tạo QR Code:", err);
+        } finally {
+            setGeneratingQRFor(null);
+        }
+    };
+
+    useEffect(() => {
+        loadAreaTables();
+    }, [user?.areaId]);
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        loadAreaTables();
+        setTimeout(() => setRefreshing(false), 800);
+    };
+
+    // General paginated tables (admin/cashier)
+    const { data, loading: apiLoading, error: apiError } = useTableApi(page, pageSize);
+
+    // Normalize to a unified shape
+    const allTables = isWaiter
+        ? areaTables.map((t) => ({
+              id: t.id,
+              tableNumber: t.tableNumber,
+              number: t.tableNumber,
+              status: t.status,
+              capacity: t.capacity,
+              areaName: t.areaName,
+              qrCode: t.qrCode,
+              positionX: 0,
+              positionY: 0,
+          }))
+        : (data?.data || []).map((t) => ({
+              ...t,
+              number: t.tableNumber,
+              capacity: 0,
+              positionX: 0,
+              positionY: 0,
+          }));
+
+    const loading = isWaiter ? areaLoading : apiLoading;
+    const error = isWaiter ? areaError : apiError;
+
+    const filteredTables =
+        filter === "all"
+            ? allTables
+            : allTables.filter((t) => t.status.toLowerCase() === filter);
+
     const statusCounts = {
-        available: data?.data.filter((t) => t.status.toLowerCase() === "available").length || 0,
-        occupied: data?.data.filter((t) => t.status.toLowerCase() === "occupied").length || 0,
-        "waiting-food": data?.data.filter((t) => t.status.toLowerCase() === "waiting-food").length || 0,
-        "waiting-payment": data?.data.filter((t) => t.status.toLowerCase() === "waiting-payment").length || 0,
+        available: allTables.filter((t) => t.status.toLowerCase() === "available").length,
+        occupied: allTables.filter((t) => t.status.toLowerCase() === "occupied").length,
+        "waiting-food": allTables.filter((t) => t.status.toLowerCase() === "waiting-food").length,
+        "waiting-payment": allTables.filter((t) => t.status.toLowerCase() === "waiting-payment").length,
     };
+
+    const areaName = areaTables[0]?.areaName;
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
             {/* Header */}
-            <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        {isWaiter && (
+                            <Button variant="ghost" size="icon" asChild>
+                                <Link href="/waiter">
+                                    <ArrowLeft size={18} />
+                                </Link>
+                            </Button>
+                        )}
                         <div>
-                            <h1 className="text-2xl font-bold">
-                                <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                                    Table Management
-                                </span>
+                            <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                                Quản lý bàn ăn
                             </h1>
-                            <p className="text-muted-foreground text-sm">
-                                {user ? `Welcome, ${user.name.split(" ")[0]}` : "Monitor and manage table status"}
+                            <p className="text-sm text-muted-foreground">
+                                {user ? `Xin chào, ${user.name}` : "Theo dõi và quản lý trạng thái bàn"}
+                                {areaName && (
+                                    <span className="ml-1 text-violet-600 dark:text-violet-400">— {areaName}</span>
+                                )}
                             </p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <Select
-                                value={filter}
-                                onValueChange={(v) => setFilter(v as TableStatus | "all")}
-                            >
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Filter by status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {statusFilters.map((status) => (
-                                        <SelectItem key={status.value} value={status.value}>
-                                            {status.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {isAuthenticated && (
-                                <Button variant="outline" onClick={logout}>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                                        <polyline points="16 17 21 12 16 7" />
-                                        <line x1="21" x2="9" y1="12" y2="12" />
-                                    </svg>
-                                    Logout
-                                </Button>
-                            )}
-                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {isWaiter && (
+                            <Button variant="ghost" size="icon" onClick={handleRefresh} title="Làm mới">
+                                <RefreshCw size={17} className={refreshing ? "animate-spin" : ""} />
+                            </Button>
+                        )}
+                        {isAuthenticated && (
+                            <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5 text-gray-500 hover:text-red-600 px-3">
+                                <LogOut size={15} />
+                                <span>Đăng xuất</span>
+                            </Button>
+                        )}
                     </div>
                 </div>
             </header>
 
-            {/* Status Summary */}
-            <div className="max-w-7xl mx-auto px-6 py-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
-                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                            {statusCounts.available}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Available</div>
-                    </div>
-                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 text-center">
-                        <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                            {statusCounts.occupied}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Occupied</div>
-                    </div>
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-center">
-                        <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
-                            {statusCounts["waiting-food"]}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Waiting Food</div>
-                    </div>
-                    <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-center">
-                        <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">
-                            {statusCounts["waiting-payment"]}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Waiting Payment</div>
-                    </div>
+            <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+                {/* Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[
+                        { icon: <TableProperties size={22} />, value: statusCounts.available, label: "Bàn trống", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" },
+                        { icon: <UtensilsCrossed size={22} />, value: statusCounts.occupied, label: "Có khách", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10" },
+                        { icon: <Clock size={22} />, value: statusCounts["waiting-food"], label: "Chờ món", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
+                        { icon: <CreditCard size={22} />, value: statusCounts["waiting-payment"], label: "Chờ thanh toán", color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10" },
+                    ].map(({ icon, value, label, color, bg }) => (
+                        <Card key={label} className="border-0 shadow-sm">
+                            <CardContent className="p-5 flex items-center gap-4">
+                                <div className={`${bg} ${color} p-3 rounded-xl shrink-0`}>{icon}</div>
+                                <div>
+                                    <div className={`text-3xl font-bold ${color}`}>{value}</div>
+                                    <div className="text-sm text-muted-foreground mt-0.5">{label}</div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+
+                {/* Filter tabs */}
+                <div className="flex flex-wrap gap-2">
+                    {statusFilters.map((sf) => (
+                        <button
+                            key={sf.value}
+                            onClick={() => setFilter(sf.value)}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                                filter === sf.value
+                                    ? "bg-violet-600 text-white border-violet-600"
+                                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-violet-400"
+                            }`}
+                        >
+                            {sf.label}
+                            {sf.value !== "all" && (
+                                <span className="ml-1.5 opacity-70">
+                                    ({sf.value === "available" ? statusCounts.available
+                                      : sf.value === "occupied" ? statusCounts.occupied
+                                      : sf.value === "waiting-food" ? statusCounts["waiting-food"]
+                                      : statusCounts["waiting-payment"]})
+                                </span>
+                            )}
+                        </button>
+                    ))}
                 </div>
 
                 {/* Table Grid */}
                 {loading ? (
-                    <div className="text-center py-12 text-muted-foreground">Loading tables...</div>
+                    <div className="text-center py-16 text-muted-foreground">Đang tải danh sách bàn...</div>
                 ) : error ? (
-                    <div className="text-center py-12 text-destructive">{error}</div>
+                    <div className="text-center py-16 text-destructive">{error}</div>
+                ) : filteredTables.length === 0 ? (
+                    <div className="text-center py-16 text-muted-foreground">
+                        Không có bàn nào phù hợp với bộ lọc đã chọn.
+                    </div>
                 ) : (
                     <>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                             {filteredTables.map((table) => (
                                 <TableCard
                                     key={table.id}
                                     table={{
                                         ...table,
-                                        tableNumber: table.tableNumber,
-                                        number: table.tableNumber, // fallback for legacy Table type, not used for display
                                         status: table.status.toLowerCase() as TableStatus,
-                                        capacity: 0, // Not provided by API
-                                        positionX: 0,
-                                        positionY: 0,
                                     }}
-                                    onClick={() => {
-                                        setSelectedTable(table);
-                                        setNewStatus(table.status.toLowerCase() as TableStatus);
-                                    }}
+                                    showQR={!isWaiter}
+                                    onClick={() => setSelectedTable(table)}
+                                    onGenerateQR={isWaiter ? () => handleGenerateQR(table.id) : undefined}
+                                    isGeneratingQR={generatingQRFor === table.id}
                                 />
                             ))}
                         </div>
-                        {filteredTables.length === 0 && (
-                            <div className="text-center py-12 text-muted-foreground">
-                                No tables found with the selected filter.
+
+                        {/* Pagination — only for admin/cashier */}
+                        {!isWaiter && (
+                            <div className="flex justify-center items-center gap-3 mt-8">
+                                <Button
+                                    variant="outline"
+                                    disabled={page === 1 || loading}
+                                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                >
+                                    Trang trước
+                                </Button>
+                                <span className="text-sm text-muted-foreground">
+                                    Trang {data?.pageNumber || 1} / {data?.totalPages || 1}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    disabled={!data?.hasNextPage || loading}
+                                    onClick={() => setPage((p) => p + 1)}
+                                >
+                                    Trang sau
+                                </Button>
                             </div>
                         )}
-                        {/* Pagination Controls */}
-                        <div className="flex justify-center gap-2 mt-8">
-                            <Button
-                                variant="outline"
-                                disabled={page === 1 || loading}
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            >
-                                Previous
-                            </Button>
-                            <span className="px-4 py-2 text-sm">
-                                Page {data?.pageNumber || 1} of {data?.totalPages || 1}
-                            </span>
-                            <Button
-                                variant="outline"
-                                disabled={!data?.hasNextPage || loading}
-                                onClick={() => setPage((p) => p + 1)}
-                            >
-                                Next
-                            </Button>
-                        </div>
                     </>
                 )}
             </div>
 
-            {/* Table Details Dialog */}
-            <Dialog
-                open={!!selectedTable}
-                onOpenChange={(open) => !open && setSelectedTable(null)}
-            >
-                <DialogContent className="sm:max-w-md">
+            {/* Table Detail Dialog */}
+            <Dialog open={!!selectedTable} onOpenChange={(open) => !open && setSelectedTable(null)}>
+                <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
-                        <DialogTitle>Table {selectedTable?.number}</DialogTitle>
+                        <DialogTitle>Bàn {selectedTable?.tableNumber}</DialogTitle>
                         <DialogDescription>
-                            Capacity: {selectedTable?.capacity} seats
+                            {selectedTable?.areaName && `Khu vực: ${selectedTable.areaName}`}
+                            {selectedTable?.capacity > 0 && ` — ${selectedTable.capacity} chỗ ngồi`}
                         </DialogDescription>
                     </DialogHeader>
-
-                    <div className="space-y-4 py-4">
-                        {/* Current Order Info */}
-                        {/* No tableOrder info from API, so nothing to show here */}
-
-                        {/* Status Update */}
-                        <div>
-                            <label className="text-sm font-medium mb-2 block">
-                                Update Status
-                            </label>
-                            <Select
-                                value={newStatus}
-                                onValueChange={(v) => setNewStatus(v as TableStatus)}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select new status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="available">Available</SelectItem>
-                                    <SelectItem value="occupied">Occupied</SelectItem>
-                                    <SelectItem value="waiting-food">Waiting for Food</SelectItem>
-                                    <SelectItem value="waiting-payment">
-                                        Waiting for Payment
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                    <div className="py-4 space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Trạng thái hiện tại</span>
+                            <span className="font-medium capitalize">
+                                {selectedTable?.status === "available" ? "Trống"
+                                 : selectedTable?.status === "occupied" ? "Có khách"
+                                 : selectedTable?.status === "waiting-food" ? "Chờ món"
+                                 : selectedTable?.status === "waiting-payment" ? "Chờ thanh toán"
+                                 : selectedTable?.status}
+                            </span>
                         </div>
+                        {selectedTable?.qrCode && (
+                            <div className="flex flex-col items-center gap-3 pt-2">
+                                <p className="text-xs text-muted-foreground">Mã QR</p>
+                                <img
+                                    src={`data:image/png;base64,${selectedTable.qrCode}`}
+                                    alt={`QR Code bàn ${selectedTable.tableNumber}`}
+                                    className="w-48 h-48 rounded-lg border"
+                                />
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5"
+                                    onClick={() => handleDownloadQR(selectedTable.qrCode, selectedTable.tableNumber)}
+                                >
+                                    <Download size={14} />
+                                    Tải xuống
+                                </Button>
+                            </div>
+                        )}
                     </div>
-
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setSelectedTable(null)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleStatusUpdate}
-                            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
-                        >
-                            Update Status
+                            Đóng
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -257,3 +331,4 @@ export default function TablesPage() {
         </div>
     );
 }
+
