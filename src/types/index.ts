@@ -111,6 +111,7 @@ export interface User {
     email: string;
     role: Role;
     avatar?: string;
+    areaId?: string;
 }
 
 // ==================== PRODUCT ====================
@@ -145,6 +146,16 @@ export interface ApiTable {
     tableNumber: string;
     areaName: string;
     status: string;
+}
+
+export interface AreaApiTable {
+    id: string;
+    tableNumber: string;
+    areaName: string;
+    status: string;
+    qrCode: string | null;
+    capacity: number;
+    orders: unknown[];
 }
 
 export interface TableListParams {

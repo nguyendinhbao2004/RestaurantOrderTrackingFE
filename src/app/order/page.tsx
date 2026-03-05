@@ -17,6 +17,7 @@ import { useVoiceOrder } from "@/hooks/useVoiceOrder";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
 import { mapProductsToMenuItems } from "@/lib/helpers";
+import { fetchTableBySession } from "@/services/table.service";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,24 @@ export default function OrderPage() {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [showOrderStatus, setShowOrderStatus] = useState(false);
 
+  const { placeOrder, setSelectedTable } = useOrder();
+
+  // Resolve session token from URL → set table
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const session = params.get("session");
+    if (!session) return;
+    fetchTableBySession(session)
+      .then((res) => {
+        setSelectedTable(res.data.tableId);
+        // Remove session param from URL without reload
+        const url = new URL(window.location.href);
+        url.searchParams.delete("session");
+        window.history.replaceState({}, "", url.toString());
+      })
+      .catch((err) => console.error("Không lấy được bàn từ session:", err));
+  }, []);
+
   // Pagination States
   const [pageIndex, setPageIndex] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -42,8 +61,6 @@ export default function OrderPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const { placeOrder } = useOrder();
 
   const {
     isListening,

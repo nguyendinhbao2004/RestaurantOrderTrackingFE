@@ -26,6 +26,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const REFRESH_TOKEN_KEY = 'restaurant_refresh_token';
+const AREA_ID_KEY = 'restaurant_area_id';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
@@ -39,10 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (token) {
             const storedUser = verifyToken(token);
             if (storedUser) {
+                storedUser.areaId = localStorage.getItem(AREA_ID_KEY) || undefined;
                 setUser(storedUser);
             } else {
                 removeToken();
                 localStorage.removeItem(REFRESH_TOKEN_KEY);
+                localStorage.removeItem(AREA_ID_KEY);
             }
         }
         setIsLoading(false);
@@ -73,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = useCallback(async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
         try {
             const response = await loginApi({ userName: username, password });
-            const { accessToken, refreshToken, role, id } = response.data;
+            const { accessToken, refreshToken, role, id, areaId } = response.data;
 
             // Map API response to User object
             const authUser: User = {
@@ -82,11 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: username,
                 role: role.toLowerCase() as Role,
                 avatar: undefined,
+                areaId: areaId ?? undefined,
             };
 
             // Store tokens
             setToken(accessToken);
             localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+            if (areaId) localStorage.setItem(AREA_ID_KEY, areaId);
 
             setUser(authUser);
 
@@ -101,6 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = useCallback(() => {
         removeToken();
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+        localStorage.removeItem(AREA_ID_KEY);
         setUser(null);
         router.push('/login');
     }, [router]);

@@ -2,24 +2,28 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableStatus } from "@/types";
 import { getTableStatusColor } from "@/lib/helpers";
 import { TableQRCode } from "@/components/tables/TableQRCode";
+import { QrCode, Loader2 } from "lucide-react";
 
 interface TableCardProps {
-    table: Table & { tableNumber?: string };
+    table: Table & { tableNumber?: string; qrCode?: string | null };
     onClick?: () => void;
     showQR?: boolean;
+    onGenerateQR?: () => void;
+    isGeneratingQR?: boolean;
 }
 
 const statusLabels: Record<TableStatus, string> = {
-    available: "Available",
-    occupied: "Occupied",
-    "waiting-food": "Waiting for Food",
-    "waiting-payment": "Waiting for Payment",
+    available: "Trống",
+    occupied: "Có khách",
+    "waiting-food": "Chờ món",
+    "waiting-payment": "Chờ thanh toán",
 };
 
-export function TableCard({ table, onClick, showQR = true }: TableCardProps) {
+export function TableCard({ table, onClick, showQR = true, onGenerateQR, isGeneratingQR = false }: TableCardProps) {
     const statusColor = getTableStatusColor(table.status);
 
     // Prefer table.tableNumber if present, else fallback to table.number
@@ -41,10 +45,10 @@ export function TableCard({ table, onClick, showQR = true }: TableCardProps) {
                         <div
                             className={`w-3 h-3 rounded-full ${statusColor} animate-pulse`}
                         />
-                        <span className="font-bold text-lg">Table {displayTableNumber}</span>
+                        <span className="font-bold text-lg">Bàn {displayTableNumber}</span>
                     </div>
                     <Badge variant="outline" className="text-xs">
-                        {table.capacity} seats
+                        {table.capacity} chỗ
                     </Badge>
                 </div>
 
@@ -57,7 +61,7 @@ export function TableCard({ table, onClick, showQR = true }: TableCardProps) {
 
                     {table.currentOrderId && (
                         <p className="text-xs text-muted-foreground mt-2 text-center">
-                            Order: {table.currentOrderId}
+                            Đơn: {table.currentOrderId}
                         </p>
                     )}
                 </div>
@@ -65,6 +69,23 @@ export function TableCard({ table, onClick, showQR = true }: TableCardProps) {
                 {showQR && (
                     <div className="mt-3 flex justify-center">
                         <TableQRCode table={table} />
+                    </div>
+                )}
+
+                {onGenerateQR && table.qrCode === null && (
+                    <div className="mt-3">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-1.5 text-violet-600 border-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950"
+                            onClick={(e) => { e.stopPropagation(); onGenerateQR(); }}
+                            disabled={isGeneratingQR}
+                        >
+                            {isGeneratingQR
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : <QrCode size={14} />}
+                            Tạo QR Code
+                        </Button>
                     </div>
                 )}
             </CardContent>
