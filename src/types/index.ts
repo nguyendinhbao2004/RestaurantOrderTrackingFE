@@ -129,3 +129,25 @@ export interface ProductListParams {
     pageIndex?: number;
     pageSize?: number;
 }
+
+// ==================== CATEGORY ====================
+export interface Category {
+    id: number;
+    name: string;
+    description: string;
+    imageUrl: string | null;
+    isActive: boolean;
+}
+
+// ==================== API TABLE ====================
+export interface ApiTable {
+    id: string;
+    tableNumber: string;
+    areaName: string;
+    status: string;
+}
+
+export interface TableListParams {
+    pageIndex?: number;
+    pageSize?: number;
+}
