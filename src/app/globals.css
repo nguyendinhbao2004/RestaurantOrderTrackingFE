@@ -119,7 +119,6 @@
   * {
     @apply border-border outline-ring/50;
   }
-
   body {
     @apply bg-background text-foreground;
   }
@@ -130,7 +129,6 @@
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -141,7 +139,6 @@
     opacity: 0;
     transform: translateY(20px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -149,12 +146,10 @@
 }
 
 @keyframes float {
-
   0%,
   100% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-10px);
   }
@@ -190,12 +185,10 @@
 
 /* Voice ordering animations */
 @keyframes soundbar {
-
   0%,
   100% {
     transform: scaleY(0.4);
   }
-
   50% {
     transform: scaleY(1);
   }
@@ -205,42 +198,16 @@
   0% {
     background-position: 200% 0;
   }
-
   100% {
     background-position: -200% 0;
   }
 }
 
-@keyframes pulse-slow {
-
-  0%,
-  100% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-  }
+/* Hide scrollbar but keep scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-pulse-slow {
-  animation: pulse-slow 6s ease-in-out infinite;
-}
-
-.animate-scaleIn {
-  animation: scaleIn 0.5s ease-out forwards;
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

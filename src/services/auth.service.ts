@@ -19,6 +19,7 @@ export interface LoginResponseData {
     role: string;
     accessToken: string;
     refreshToken: string;
+    areaId?: string;
 }
 
 export interface RefreshTokenRequest {

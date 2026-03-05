@@ -11,11 +11,13 @@ import { TableSelector } from "@/components/order/TableSelector";
 import { OrderStatusDisplay } from "@/components/order/OrderStatus";
 import { VoiceOrderButton } from "@/components/order/VoiceOrderButton";
 import { VoiceOrderFeedback } from "@/components/order/VoiceOrderFeedback";
-import { Order, MenuItem } from "@/types";
+import { Order, MenuItem, Category } from "@/types";
 import { useOrder } from "@/contexts/OrderContext";
 import { useVoiceOrder } from "@/hooks/useVoiceOrder";
 import { fetchProducts } from "@/services/product.service";
+import { fetchCategories } from "@/services/category.service";
 import { mapProductsToMenuItems } from "@/lib/helpers";
+import { fetchTableBySession } from "@/services/table.service";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +32,24 @@ export default function OrderPage() {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [showOrderStatus, setShowOrderStatus] = useState(false);
 
+  const { placeOrder, setSelectedTable } = useOrder();
+
+  // Resolve session token from URL → set table
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const session = params.get("session");
+    if (!session) return;
+    fetchTableBySession(session)
+      .then((res) => {
+        setSelectedTable(res.data.tableId);
+        // Remove session param from URL without reload
+        const url = new URL(window.location.href);
+        url.searchParams.delete("session");
+        window.history.replaceState({}, "", url.toString());
+      })
+      .catch((err) => console.error("Không lấy được bàn từ session:", err));
+  }, []);
+
   // Pagination States
   const [pageIndex, setPageIndex] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -37,10 +57,10 @@ export default function OrderPage() {
 
   // API States
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const { placeOrder } = useOrder();
 
   const {
     isListening,
@@ -81,20 +101,35 @@ export default function OrderPage() {
     }
   }, [pageIndex]);
 
+  // Fetch categories from API
+  const loadCategories = useCallback(async () => {
+    try {
+      setIsCategoriesLoading(true);
+      const response = await fetchCategories();
+      // Only keep active categories
+      const activeCategories = response.data.filter((cat) => cat.isActive);
+      setCategories(activeCategories);
+    } catch (err) {
+      console.error("Error loading categories:", err);
+    } finally {
+      setIsCategoriesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
 
-  const categories = useMemo(() => {
-    const uniqueNames = Array.from(
-      new Set(menuItems.map((item) => item.categoryName)),
-    ).sort();
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
 
+  const categoryTabs = useMemo(() => {
     return [
       { value: "all", label: "Tất cả" },
-      ...uniqueNames.map((name) => ({ value: name, label: name })),
+      ...categories.map((cat) => ({ value: cat.name, label: cat.name })),
     ];
-  }, [menuItems]);
+  }, [categories]);
 
   const filteredItems = useMemo(() => {
     if (selectedCategory === "all") {
@@ -218,12 +253,12 @@ export default function OrderPage() {
                 value={selectedCategory}
                 onValueChange={(v) => setSelectedCategory(v)}
               >
-                <TabsList className="mb-6 flex-wrap h-auto gap-2 bg-transparent p-0">
-                  {categories.map((category) => (
+                <TabsList className="mb-6 h-auto gap-2 bg-transparent p-0 flex overflow-x-auto scrollbar-hide whitespace-nowrap pb-2">
+                  {categoryTabs.map((category) => (
                     <TabsTrigger
                       key={category.value}
                       value={category.value}
-                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-full px-4"
+                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-full px-4 shrink-0"
                     >
                       {category.label}
                     </TabsTrigger>

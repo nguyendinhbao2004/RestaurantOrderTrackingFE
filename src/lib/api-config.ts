@@ -29,6 +29,11 @@ export const API_ENDPOINTS = {
         detail: (id: string) => `${API_BASE_URL}/api/Product/${id}`,
     },
 
+    // ==================== CATEGORIES ====================
+    categories: {
+        list: `${API_BASE_URL}/api/Category`,
+    },
+
     // ==================== ORDERS ====================
     orders: {
         list: `${API_BASE_URL}/api/Order`,
@@ -41,6 +46,9 @@ export const API_ENDPOINTS = {
     tables: {
         list: `${API_BASE_URL}/api/Table`,
         detail: (id: string) => `${API_BASE_URL}/api/Table/${id}`,
+        byArea: (areaId: string) => `${API_BASE_URL}/api/Table/area/${areaId}`,
+        qrSession: (tableId: string) => `${API_BASE_URL}/api/Table/qr-session/${tableId}`,
+        bySession: (session: string) => `${API_BASE_URL}/api/Table/by-session/${session}`,
     },
 
     // ==================== EMPLOYEES ====================

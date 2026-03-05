@@ -47,7 +47,9 @@ import { MenuItem } from "@/types";
 import { useOrder } from "@/contexts/OrderContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchProducts } from "@/services/product.service";
+import { fetchCategories } from "@/services/category.service";
 import { mapProductsToMenuItems } from "@/lib/helpers";
+import { Category } from "@/types";
 import { formatCurrency } from "@/lib/helpers";
 
 /* ──────────── types ──────────── */
@@ -70,6 +72,7 @@ export default function CustomerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [apiCategories, setApiCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [pageIndex, setPageIndex] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -112,7 +115,7 @@ export default function CustomerPage() {
       const pagination = response.meta?.pagination;
       if (pagination) setTotalPages(pagination.totalPages);
     } catch {
-      setError("Unable to load products. Please try again later.");
+      setError("Không thể tải sản phẩm. Vui lòng thử lại sau.");
     } finally {
       setIsLoading(false);
     }
@@ -122,16 +125,20 @@ export default function CustomerPage() {
     loadProducts();
   }, [loadProducts]);
 
+  // Fetch categories from API
+  useEffect(() => {
+    fetchCategories()
+      .then((res) => setApiCategories(res.data))
+      .catch(() => {});
+  }, []);
+
   // Categories
-  const categories = useMemo(() => {
-    const names = Array.from(
-      new Set(menuItems.map((i) => i.categoryName))
-    ).sort();
-    return [
-      { value: "all", label: "All" },
-      ...names.map((n) => ({ value: n, label: n })),
-    ];
-  }, [menuItems]);
+  const categories = useMemo(() => [
+    { value: "all", label: "Tất cả" },
+    ...apiCategories
+      .filter((c) => c.isActive)
+      .map((c) => ({ value: c.name, label: c.name })),
+  ], [apiCategories]);
 
   // Filtered items
   const filteredItems = useMemo(() => {
@@ -144,7 +151,7 @@ export default function CustomerPage() {
       items = items.filter(
         (i) =>
           i.name.toLowerCase().includes(q) ||
-          i.description.toLowerCase().includes(q)
+          i.description.toLowerCase().includes(q),
       );
     }
     return items;
@@ -186,19 +193,19 @@ export default function CustomerPage() {
   }[] = [
     {
       value: "cod",
-      label: "Cash on Delivery",
-      desc: "Pay when you receive your order",
+      label: "Thanh toán khi nhận hàng",
+      desc: "Thanh toán khi bạn nhận được đơn hàng",
       icon: <Banknote className="w-5 h-5" />,
     },
     {
       value: "bank",
-      label: "Bank Transfer",
-      desc: "Transfer to our bank account",
+      label: "Chuyển khoản ngân hàng",
+      desc: "Chuyển khoản vào tài khoản ngân hàng",
       icon: <CreditCard className="w-5 h-5" />,
     },
     {
       value: "ewallet",
-      label: "E-Wallet",
+      label: "Ví điện tử",
       desc: "MoMo, ZaloPay, VNPay",
       icon: <Wallet className="w-5 h-5" />,
     },
@@ -211,7 +218,10 @@ export default function CustomerPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center gap-4">
             {/* Logo */}
-            <Link href="/customer" className="flex items-center gap-2.5 shrink-0">
+            <Link
+              href="/customer"
+              className="flex items-center gap-2.5 shrink-0"
+            >
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
                 <span className="text-white font-bold text-base">R</span>
               </div>
@@ -224,7 +234,7 @@ export default function CustomerPage() {
             <div className="flex-1 max-w-md relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search dishes..."
+                placeholder="Tìm kiếm món ăn..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 rounded-full border-border/50 bg-muted/50 focus:bg-background"
@@ -232,24 +242,43 @@ export default function CustomerPage() {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="relative rounded-full px-4"
+                onClick={() => setShowCart(true)}
+              >
+                <ShoppingCart className="w-4 h-4 mr-1.5" />
+                <span className="hidden sm:inline">Giỏ hàng</span>
+                {getCartItemCount() > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs flex items-center justify-center font-bold">
+                    {getCartItemCount()}
+                  </span>
+                )}
+              </Button>
+
               {!isAuthenticated ? (
                 <Button
                   asChild
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="rounded-full px-3 text-sm hidden sm:flex"
+                  className="rounded-full px-4 text-sm hidden sm:flex"
                 >
                   <Link href="/login">
                     <LogIn className="w-4 h-4 mr-1.5" />
-                    Login
+                    Đăng nhập
                   </Link>
                 </Button>
               ) : (
-                <div className="hidden sm:flex items-center gap-3 mr-2">
+                <div className="hidden sm:flex items-center gap-3">
                   <div className="flex flex-col items-end">
-                    <span className="text-sm font-semibold leading-none">{user?.name}</span>
-                    <span className="text-xs text-muted-foreground mt-0.5 capitalize">{user?.role}</span>
+                    <span className="text-sm font-semibold leading-none">
+                      {user?.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground mt-0.5 capitalize">
+                      {user?.role}
+                    </span>
                   </div>
                   <Button
                     variant="ghost"
@@ -262,21 +291,6 @@ export default function CustomerPage() {
                   </Button>
                 </div>
               )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="relative rounded-full px-4"
-                onClick={() => setShowCart(true)}
-              >
-                <ShoppingCart className="w-4 h-4 mr-1.5" />
-                <span className="hidden sm:inline">Cart</span>
-                {getCartItemCount() > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs flex items-center justify-center font-bold">
-                    {getCartItemCount()}
-                  </span>
-                )}
-              </Button>
             </div>
           </div>
         </div>
@@ -288,11 +302,11 @@ export default function CustomerPage() {
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
             <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
-              Order Online
+              Đặt hàng trực tuyến
             </span>
           </h1>
           <p className="text-muted-foreground">
-            Browse our menu and get your favorite dishes delivered to your door.
+            Duyệt thực đơn và đặt món yêu thích giao tận nơi.
           </p>
         </div>
 
@@ -300,7 +314,7 @@ export default function CustomerPage() {
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-12 w-12 animate-spin text-violet-600 mb-4" />
-            <p className="text-muted-foreground">Loading menu...</p>
+            <p className="text-muted-foreground">Đang tải thực đơn...</p>
           </div>
         )}
 
@@ -312,7 +326,7 @@ export default function CustomerPage() {
                 <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
                 <div>
                   <h3 className="font-semibold text-destructive mb-1">
-                    Error loading data
+                    Lỗi tải dữ liệu
                   </h3>
                   <p className="text-sm text-muted-foreground mb-4">{error}</p>
                   <Button
@@ -320,7 +334,7 @@ export default function CustomerPage() {
                     size="sm"
                     variant="outline"
                   >
-                    Try Again
+                    Thử lại
                   </Button>
                 </div>
               </div>
@@ -353,10 +367,10 @@ export default function CustomerPage() {
                   <div className="text-center py-16">
                     <ShoppingBag className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
                     <p className="text-muted-foreground text-lg">
-                      No dishes found
+                      Không tìm thấy món ăn
                     </p>
                     <p className="text-muted-foreground text-sm mt-1">
-                      Try a different category or search term
+                      Thử danh mục hoặc từ khóa khác
                     </p>
                   </div>
                 ) : (
@@ -401,7 +415,7 @@ export default function CustomerPage() {
                     >
                       {page}
                     </Button>
-                  )
+                  ),
                 )}
 
                 <Button
@@ -428,7 +442,7 @@ export default function CustomerPage() {
           className="fixed bottom-6 right-6 z-40 lg:hidden bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-full px-6 py-3.5 shadow-2xl shadow-violet-500/40 flex items-center gap-2 hover:scale-105 transition-transform"
         >
           <ShoppingCart className="w-5 h-5" />
-          <span className="font-semibold">{getCartItemCount()} items</span>
+          <span className="font-semibold">{getCartItemCount()} món</span>
           <Separator orientation="vertical" className="h-5 bg-white/30" />
           <span className="font-bold">{formatCurrency(getCartTotal())}</span>
         </button>
@@ -440,18 +454,18 @@ export default function CustomerPage() {
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle className="flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-violet-600" />
-              Your Cart
+              Giỏ hàng
               {getCartItemCount() > 0 && (
                 <Badge
                   variant="secondary"
                   className="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
                 >
-                  {getCartItemCount()} items
+                  {getCartItemCount()} món
                 </Badge>
               )}
             </DialogTitle>
             <DialogDescription>
-              Review your items before checkout
+              Xem lại các món trước khi thanh toán
             </DialogDescription>
           </DialogHeader>
 
@@ -461,22 +475,22 @@ export default function CustomerPage() {
             <div className="flex-1 flex flex-col items-center justify-center py-16 px-6">
               <ShoppingBag className="w-16 h-16 text-muted-foreground/30 mb-4" />
               <p className="text-muted-foreground font-medium">
-                Your cart is empty
+                Giỏ hàng trống
               </p>
               <p className="text-muted-foreground text-sm mt-1">
-                Add some delicious dishes!
+                Thêm món ăn ngon nào!
               </p>
               <Button
                 variant="outline"
                 className="mt-4 rounded-full"
                 onClick={() => setShowCart(false)}
               >
-                Browse Menu
+                Xem thực đơn
               </Button>
             </div>
           ) : (
-            <>
-              <ScrollArea className="flex-1 px-6">
+            <div className="flex flex-col min-h-0 flex-1">
+              <ScrollArea className="flex-1 px-6 overflow-y-auto">
                 <div className="py-4 space-y-4">
                   {cart.map((item) => (
                     <div
@@ -508,7 +522,7 @@ export default function CustomerPage() {
                           onClick={() =>
                             updateCartQuantity(
                               item.menuItem.id,
-                              item.quantity - 1
+                              item.quantity - 1,
                             )
                           }
                         >
@@ -524,7 +538,7 @@ export default function CustomerPage() {
                           onClick={() =>
                             updateCartQuantity(
                               item.menuItem.id,
-                              item.quantity + 1
+                              item.quantity + 1,
                             )
                           }
                         >
@@ -548,7 +562,7 @@ export default function CustomerPage() {
 
               <div className="px-6 py-4 space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold">Tổng cộng</span>
                   <span className="text-xl font-bold text-violet-600">
                     {formatCurrency(getCartTotal())}
                   </span>
@@ -557,11 +571,11 @@ export default function CustomerPage() {
                   onClick={handleStartCheckout}
                   className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full py-5 text-base"
                 >
-                  Proceed to Checkout
+                  Tiến hành thanh toán
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -572,48 +586,51 @@ export default function CustomerPage() {
           {checkoutStep !== "success" && (
             <>
               <DialogHeader className="px-6 pt-6 pb-4">
-                <DialogTitle>Checkout</DialogTitle>
+                <DialogTitle>Thanh toán</DialogTitle>
                 <DialogDescription>
-                  {checkoutStep === "delivery" && "Enter your delivery details"}
-                  {checkoutStep === "payment" && "Choose your payment method"}
-                  {checkoutStep === "confirm" && "Review and confirm your order"}
+                  {checkoutStep === "delivery" && "Nhập thông tin giao hàng"}
+                  {checkoutStep === "payment" && "Chọn phương thức thanh toán"}
+                  {checkoutStep === "confirm" && "Xem lại và xác nhận đơn hàng"}
                 </DialogDescription>
               </DialogHeader>
 
               {/* Progress Steps */}
               <div className="px-6 pb-4">
-                <div className="flex items-center gap-2">
+                {/* connector line row */}
+                <div className="flex items-center">
                   {(["delivery", "payment", "confirm"] as CheckoutStep[]).map(
-                    (step, i) => (
-                      <div key={step} className="flex items-center flex-1">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                            checkoutStep === step
-                              ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white"
-                              : i <
-                                  ["delivery", "payment", "confirm"].indexOf(
-                                    checkoutStep
-                                  )
-                                ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
-                                : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {i + 1}
+                    (step, i) => {
+                      const currentIdx = ["delivery", "payment", "confirm"].indexOf(checkoutStep);
+                      const isActive = checkoutStep === step;
+                      const isDone = i < currentIdx;
+                      return (
+                        <div key={step} className="flex items-center flex-1 last:flex-none">
+                          <div className="flex flex-col items-center gap-1">
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                                isActive
+                                  ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+                                  : isDone
+                                  ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {i + 1}
+                            </div>
+                            <span className={`text-[10px] font-medium whitespace-nowrap ${isActive ? "text-violet-600" : isDone ? "text-violet-400" : "text-muted-foreground"}`}>
+                              {step === "delivery" ? "Giao hàng" : step === "payment" ? "Thanh toán" : "Xác nhận"}
+                            </span>
+                          </div>
+                          {i < 2 && (
+                            <div
+                              className={`flex-1 h-0.5 mx-2 mb-4 rounded ${
+                                i < currentIdx ? "bg-violet-400" : "bg-muted"
+                              }`}
+                            />
+                          )}
                         </div>
-                        {i < 2 && (
-                          <div
-                            className={`flex-1 h-0.5 mx-2 rounded ${
-                              i <
-                              ["delivery", "payment", "confirm"].indexOf(
-                                checkoutStep
-                              )
-                                ? "bg-violet-400"
-                                : "bg-muted"
-                            }`}
-                          />
-                        )}
-                      </div>
-                    )
+                      );
+                    },
                   )}
                 </div>
               </div>
@@ -622,6 +639,71 @@ export default function CustomerPage() {
             </>
           )}
 
+          {/* Step 3: Confirm — custom layout so only items list scrolls */}
+          {checkoutStep === "confirm" && (
+            <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="px-6 pt-5 space-y-3 flex-shrink-0">
+                {/* Delivery Summary */}
+                <div className="bg-muted/50 rounded-2xl p-4 space-y-2">
+                  <h4 className="font-semibold text-sm flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-violet-500" />
+                    Giao đến
+                  </h4>
+                  <p className="text-sm">
+                    {deliveryInfo.name} · {deliveryInfo.phone}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {deliveryInfo.address}
+                  </p>
+                  {deliveryInfo.notes && (
+                    <p className="text-xs text-muted-foreground italic">
+                      Ghi chú: {deliveryInfo.notes}
+                    </p>
+                  )}
+                </div>
+
+                {/* Payment Summary */}
+                <div className="bg-muted/50 rounded-2xl p-4">
+                  <h4 className="font-semibold text-sm flex items-center gap-1.5 mb-2">
+                    <CreditCard className="w-4 h-4 text-violet-500" />
+                    Phương thức thanh toán
+                  </h4>
+                  <p className="text-sm">
+                    {
+                      paymentOptions.find((o) => o.value === paymentMethod)
+                        ?.label
+                    }
+                  </p>
+                </div>
+
+                {/* Items header */}
+                <h4 className="font-semibold text-sm">
+                  Các món đã đặt ({getCartItemCount()})
+                </h4>
+              </div>
+
+              {/* Scrollable items list */}
+              <ScrollArea className="flex-1 px-6 pb-4 overflow-y-auto">
+                <div className="space-y-2 pr-4 pt-2">
+                  {cart.map((item) => (
+                    <div
+                      key={item.menuItem.id}
+                      className="flex justify-between items-center text-sm"
+                    >
+                      <span className="text-muted-foreground">
+                        {item.quantity}x {item.menuItem.name}
+                      </span>
+                      <span className="font-medium">
+                        {formatCurrency(item.menuItem.price * item.quantity)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {checkoutStep !== "confirm" && (
           <ScrollArea className="flex-1">
             <div className="px-6 py-6">
               {/* Step 1: Delivery Info */}
@@ -630,21 +712,21 @@ export default function CustomerPage() {
                   <div>
                     <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
                       <User className="w-4 h-4 text-violet-500" />
-                      Full Name *
+                      Họ và tên *
                     </label>
                     <Input
                       value={deliveryInfo.name}
                       onChange={(e) =>
                         setDeliveryInfo((d) => ({ ...d, name: e.target.value }))
                       }
-                      placeholder="Enter your full name"
+                      placeholder="Nhập họ và tên"
                       className="rounded-xl"
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
                       <Phone className="w-4 h-4 text-violet-500" />
-                      Phone Number *
+                      Số điện thoại *
                     </label>
                     <Input
                       value={deliveryInfo.phone}
@@ -654,14 +736,14 @@ export default function CustomerPage() {
                           phone: e.target.value,
                         }))
                       }
-                      placeholder="Enter your phone number"
+                      placeholder="Nhập số điện thoại"
                       className="rounded-xl"
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
                       <MapPin className="w-4 h-4 text-violet-500" />
-                      Delivery Address *
+                      Địa chỉ giao hàng *
                     </label>
                     <Input
                       value={deliveryInfo.address}
@@ -671,14 +753,14 @@ export default function CustomerPage() {
                           address: e.target.value,
                         }))
                       }
-                      placeholder="Enter your delivery address"
+                      placeholder="Nhập địa chỉ giao hàng"
                       className="rounded-xl"
                     />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
                       <FileText className="w-4 h-4 text-violet-500" />
-                      Notes (optional)
+                      Ghi chú (tùy chọn)
                     </label>
                     <Input
                       value={deliveryInfo.notes}
@@ -688,7 +770,7 @@ export default function CustomerPage() {
                           notes: e.target.value,
                         }))
                       }
-                      placeholder="Special instructions, floor number, etc."
+                      placeholder="Hướng dẫn đặc biệt, số tầng, v.v."
                       className="rounded-xl"
                     />
                   </div>
@@ -739,102 +821,33 @@ export default function CustomerPage() {
                 </div>
               )}
 
-              {/* Step 3: Confirm */}
-              {checkoutStep === "confirm" && (
-                <div className="space-y-5">
-                  {/* Delivery Summary */}
-                  <div className="bg-muted/50 rounded-2xl p-4 space-y-2">
-                    <h4 className="font-semibold text-sm flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-violet-500" />
-                      Delivery To
-                    </h4>
-                    <p className="text-sm">
-                      {deliveryInfo.name} · {deliveryInfo.phone}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {deliveryInfo.address}
-                    </p>
-                    {deliveryInfo.notes && (
-                      <p className="text-xs text-muted-foreground italic">
-                        Note: {deliveryInfo.notes}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Payment Summary */}
-                  <div className="bg-muted/50 rounded-2xl p-4">
-                    <h4 className="font-semibold text-sm flex items-center gap-1.5 mb-2">
-                      <CreditCard className="w-4 h-4 text-violet-500" />
-                      Payment Method
-                    </h4>
-                    <p className="text-sm">
-                      {
-                        paymentOptions.find((o) => o.value === paymentMethod)
-                          ?.label
-                      }
-                    </p>
-                  </div>
-
-                  {/* Items */}
-                  <div>
-                    <h4 className="font-semibold text-sm mb-3">
-                      Order Items ({getCartItemCount()})
-                    </h4>
-                    <div className="space-y-2">
-                      {cart.map((item) => (
-                        <div
-                          key={item.menuItem.id}
-                          className="flex justify-between items-center text-sm"
-                        >
-                          <span className="text-muted-foreground">
-                            {item.quantity}x {item.menuItem.name}
-                          </span>
-                          <span className="font-medium">
-                            {formatCurrency(
-                              item.menuItem.price * item.quantity
-                            )}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold">Total</span>
-                    <span className="text-xl font-bold text-violet-600">
-                      {formatCurrency(getCartTotal())}
-                    </span>
-                  </div>
-                </div>
-              )}
-
               {/* Success */}
               {checkoutStep === "success" && (
                 <div className="text-center py-8">
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/30">
                     <CheckCircle2 className="w-10 h-10 text-white" />
                   </div>
-                  <h2 className="text-2xl font-bold mb-2">Order Placed!</h2>
+                  <h2 className="text-2xl font-bold mb-2">
+                    Đặt hàng thành công!
+                  </h2>
                   <p className="text-muted-foreground mb-6">
-                    Your order has been submitted successfully
+                    Đơn hàng của bạn đã được gửi thành công
                   </p>
 
                   <div className="bg-muted/50 rounded-2xl p-5 text-left space-y-3 mb-6">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Order ID</span>
+                      <span className="text-muted-foreground">Mã đơn hàng</span>
                       <span className="font-mono font-bold">{orderId}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5" />
-                        Est. Delivery
+                        Dự kiến giao
                       </span>
-                      <span className="font-semibold">30–45 min</span>
+                      <span className="font-semibold">30–45 phút</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Payment</span>
+                      <span className="text-muted-foreground">Thanh toán</span>
                       <span className="font-medium">
                         {
                           paymentOptions.find((o) => o.value === paymentMethod)
@@ -848,17 +861,26 @@ export default function CustomerPage() {
                     onClick={handleCloseCheckout}
                     className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full px-8"
                   >
-                    Continue Shopping
+                    Tiếp tục mua sắm
                   </Button>
                 </div>
               )}
             </div>
           </ScrollArea>
+          )}
 
           {/* Footer buttons */}
           {checkoutStep !== "success" && (
             <>
               <Separator />
+              {checkoutStep === "confirm" && (
+                <div className="flex justify-between items-center px-6 pt-4">
+                  <span className="font-bold">Tổng cộng</span>
+                  <span className="text-xl font-bold text-violet-600">
+                    {formatCurrency(getCartTotal())}
+                  </span>
+                </div>
+              )}
               <div className="px-6 py-4 flex gap-3">
                 {checkoutStep !== "delivery" && (
                   <Button
@@ -866,32 +888,29 @@ export default function CustomerPage() {
                     className="rounded-full"
                     onClick={() =>
                       setCheckoutStep(
-                        checkoutStep === "confirm" ? "payment" : "delivery"
+                        checkoutStep === "confirm" ? "payment" : "delivery",
                       )
                     }
                   >
                     <ChevronLeft className="w-4 h-4 mr-1" />
-                    Back
+                    Quay lại
                   </Button>
                 )}
                 <Button
                   className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full"
                   disabled={checkoutStep === "delivery" && !isDeliveryValid}
                   onClick={() => {
-                    if (checkoutStep === "delivery")
-                      setCheckoutStep("payment");
+                    if (checkoutStep === "delivery") setCheckoutStep("payment");
                     else if (checkoutStep === "payment")
                       setCheckoutStep("confirm");
                     else handlePlaceOrder();
                   }}
                 >
                   {checkoutStep === "confirm" ? (
-                    <>
-                      Place Order · {formatCurrency(getCartTotal())}
-                    </>
+                    <>Đặt hàng · {formatCurrency(getCartTotal())}</>
                   ) : (
                     <>
-                      Continue
+                      Tiếp tục
                       <ArrowRight className="w-4 h-4 ml-1" />
                     </>
                   )}
@@ -907,13 +926,7 @@ export default function CustomerPage() {
 
 /* ──────────── Product Card ──────────── */
 
-function ProductCard({
-  item,
-  onAdd,
-}: {
-  item: MenuItem;
-  onAdd: () => void;
-}) {
+function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
   return (
     <Card className="group overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm hover:border-violet-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 flex flex-col">
       <div className="relative aspect-[4/3] overflow-hidden flex-shrink-0">
@@ -930,7 +943,7 @@ function ProductCard({
               variant="destructive"
               className="text-sm font-semibold px-3 py-1 bg-red-600 hover:bg-red-600"
             >
-              Out of Stock
+              Hết hàng
             </Badge>
           </div>
         )}
@@ -946,7 +959,7 @@ function ProductCard({
         <div className="absolute top-3 right-3">
           <Badge className="bg-violet-600 hover:bg-violet-700 text-white text-xs">
             <Clock className="w-3 h-3 mr-1" />
-            {item.preparationTime} min
+            {item.preparationTime} phút
           </Badge>
         </div>
       </div>
@@ -975,16 +988,13 @@ function ProductCard({
             className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full px-4 disabled:from-gray-400 disabled:to-gray-500"
           >
             <Plus className="w-4 h-4 mr-1" />
-            Add
+            Thêm
           </Button>
         </div>
 
         <div className="flex items-center gap-1 mt-2">
           {[...Array(5)].map((_, j) => (
-            <Star
-              key={j}
-              className="w-3 h-3 text-amber-500 fill-amber-500"
-            />
+            <Star key={j} className="w-3 h-3 text-amber-500 fill-amber-500" />
           ))}
           <span className="text-xs text-muted-foreground ml-1">5.0</span>
         </div>

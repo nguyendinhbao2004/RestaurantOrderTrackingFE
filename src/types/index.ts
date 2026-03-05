@@ -111,6 +111,7 @@ export interface User {
     email: string;
     role: Role;
     avatar?: string;
+    areaId?: string;
 }
 
 // ==================== PRODUCT ====================
@@ -126,6 +127,38 @@ export interface Product {
 
 export interface ProductListParams {
     keyword?: string;
+    pageIndex?: number;
+    pageSize?: number;
+}
+
+// ==================== CATEGORY ====================
+export interface Category {
+    id: number;
+    name: string;
+    description: string;
+    imageUrl: string | null;
+    isActive: boolean;
+}
+
+// ==================== API TABLE ====================
+export interface ApiTable {
+    id: string;
+    tableNumber: string;
+    areaName: string;
+    status: string;
+}
+
+export interface AreaApiTable {
+    id: string;
+    tableNumber: string;
+    areaName: string;
+    status: string;
+    qrCode: string | null;
+    capacity: number;
+    orders: unknown[];
+}
+
+export interface TableListParams {
     pageIndex?: number;
     pageSize?: number;
 }
