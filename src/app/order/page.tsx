@@ -33,6 +33,7 @@ export default function OrderPage() {
   const [showOrderStatus, setShowOrderStatus] = useState(false);
 
   const { placeOrder, setSelectedTable } = useOrder();
+  const [isSessionLocked, setIsSessionLocked] = useState(false);
 
   // Resolve session token from URL → set table
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function OrderPage() {
     fetchTableBySession(session)
       .then((res) => {
         setSelectedTable(res.data.tableId);
+        setIsSessionLocked(true);
         // Remove session param from URL without reload
         const url = new URL(window.location.href);
         url.searchParams.delete("session");
@@ -188,7 +190,7 @@ export default function OrderPage() {
                 isSupported={isSupported}
                 onToggle={toggleListening}
               />
-              <TableSelector />
+              <TableSelector disabled={isSessionLocked} />
             </div>
           </div>
         </div>
