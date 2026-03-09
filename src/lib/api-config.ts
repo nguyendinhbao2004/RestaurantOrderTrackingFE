@@ -48,7 +48,9 @@ export const API_ENDPOINTS = {
         detail: (id: string) => `${API_BASE_URL}/api/Table/${id}`,
         byArea: (areaId: string) => `${API_BASE_URL}/api/Table/area/${areaId}`,
         qrSession: (tableId: string) => `${API_BASE_URL}/api/Table/qr-session/${tableId}`,
+        refreshQrSession: (tableId: string) => `${API_BASE_URL}/api/Table/qr-session/${tableId}/refresh`,
         bySession: (session: string) => `${API_BASE_URL}/api/Table/by-session/${session}`,
+        updateStatus: `${API_BASE_URL}/api/Table/update-status`,
     },
 
     // ==================== EMPLOYEES ====================

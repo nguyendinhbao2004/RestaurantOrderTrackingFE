@@ -40,6 +40,10 @@ export async function generateQrSession(tableId: string) {
     return httpClient.post<QrSessionData>(API_ENDPOINTS.tables.qrSession(tableId));
 }
 
+export async function refreshQrSession(tableId: string) {
+    return httpClient.put<QrSessionData>(API_ENDPOINTS.tables.refreshQrSession(tableId));
+}
+
 export interface TableBySessionData {
     tableId: string;
     tableNumber: string;
@@ -52,4 +56,8 @@ export interface TableBySessionData {
 
 export async function fetchTableBySession(session: string) {
     return httpClient.get<TableBySessionData>(API_ENDPOINTS.tables.bySession(session));
+}
+
+export async function updateTableStatus(id: string, status: string) {
+    return httpClient.put<any>(API_ENDPOINTS.tables.updateStatus, { id, status });
 }

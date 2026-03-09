@@ -14,6 +14,8 @@ interface TableCardProps {
     showQR?: boolean;
     onGenerateQR?: () => void;
     isGeneratingQR?: boolean;
+    onRefreshQR?: () => void;
+    isRefreshingQR?: boolean;
 }
 
 const statusLabels: Record<TableStatus, string> = {
@@ -23,7 +25,7 @@ const statusLabels: Record<TableStatus, string> = {
     "waiting-payment": "Chờ thanh toán",
 };
 
-export function TableCard({ table, onClick, showQR = true, onGenerateQR, isGeneratingQR = false }: TableCardProps) {
+export function TableCard({ table, onClick, showQR = true, onGenerateQR, isGeneratingQR = false, onRefreshQR, isRefreshingQR = false }: TableCardProps) {
     const statusColor = getTableStatusColor(table.status);
 
     // Prefer table.tableNumber if present, else fallback to table.number
@@ -72,7 +74,7 @@ export function TableCard({ table, onClick, showQR = true, onGenerateQR, isGener
                     </div>
                 )}
 
-                {onGenerateQR && table.qrCode === null && (
+                {onGenerateQR && table.status === "available" && (!table.qrCode || table.qrCode === "null" || table.qrCode.length < 100) && (
                     <div className="mt-3">
                         <Button
                             variant="outline"
@@ -85,6 +87,23 @@ export function TableCard({ table, onClick, showQR = true, onGenerateQR, isGener
                                 ? <Loader2 size={14} className="animate-spin" />
                                 : <QrCode size={14} />}
                             Tạo QR Code
+                        </Button>
+                    </div>
+                )}
+
+                {onRefreshQR && table.status !== "available" && (!table.qrCode || table.qrCode === "null" || table.qrCode.length < 100) && (
+                    <div className="mt-3">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-1.5 text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
+                            onClick={(e) => { e.stopPropagation(); onRefreshQR(); }}
+                            disabled={isRefreshingQR}
+                        >
+                            {isRefreshingQR
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : <QrCode size={14} />}
+                            Tải lại QR
                         </Button>
                     </div>
                 )}
