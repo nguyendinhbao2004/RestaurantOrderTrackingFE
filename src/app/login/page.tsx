@@ -123,7 +123,7 @@ export default function LoginPage() {
                     </Link>
                     <h1 className="text-2xl font-bold">
                         <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                            Restaurant Staff Login
+                            Login
                         </span>
                     </h1>
                     <p className="text-muted-foreground mt-2">
@@ -282,36 +282,6 @@ export default function LoginPage() {
                             {isLoginMode ? "Register as Customer" : "Sign In"}
                         </button>
                     </CardFooter>
-                </Card>
-
-                {/* Demo Accounts */}
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm">Demo Accounts</CardTitle>
-                        <CardDescription className="text-xs">
-                            Click to auto-fill credentials
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                        <div className="grid grid-cols-2 gap-2">
-                            {demoAccounts.map((account) => (
-                                <Button
-                                    key={account.username}
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs h-auto py-2"
-                                    onClick={() => fillDemoCredentials(account.username, account.password)}
-                                >
-                                    <div className="text-left">
-                                        <div className="font-medium">{account.role}</div>
-                                        <div className="text-muted-foreground truncate text-[10px]">
-                                            {account.username}
-                                        </div>
-                                    </div>
-                                </Button>
-                            ))}
-                        </div>
-                    </CardContent>
                 </Card>
 
                 {/* Customer Notice */}
