@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTableApi } from "@/hooks/useTableApi";
-import { fetchTablesByArea, generateQrSession } from "@/services/table.service";
+import { fetchTablesByArea, generateQrSession, updateTableStatus, refreshQrSession } from "@/services/table.service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -44,6 +44,7 @@ export default function TablesPage() {
     const [page, setPage] = useState(1);
     const [refreshing, setRefreshing] = useState(false);
     const [generatingQRFor, setGeneratingQRFor] = useState<string | null>(null);
+    const [refreshingQRFor, setRefreshingQRFor] = useState<string | null>(null);
     const pageSize = 10;
 
     const isWaiter = !!user?.areaId;
@@ -64,7 +65,10 @@ export default function TablesPage() {
 
     const handleDownloadQR = (base64: string, tableNumber: string) => {
         const link = document.createElement("a");
-        link.href = `data:image/png;base64,${base64}`;
+        const href = base64.startsWith("data:image") || base64.startsWith("http") 
+            ? base64 
+            : `data:image/png;base64,${base64}`;
+        link.href = href;
         link.download = `QR-Ban-${tableNumber}.png`;
         link.click();
     };
@@ -74,17 +78,71 @@ export default function TablesPage() {
         try {
             const res = await generateQrSession(tableId);
             const qrCodeBase64 = res.data.qrCodeBase64;
-            setAreaTables((prev) =>
-                prev.map((t) => t.id === tableId ? { ...t, qrCode: qrCodeBase64 } : t)
-            );
-            // Open dialog for this table to show the QR
-            setSelectedTable((prev: any) =>
-                prev?.id === tableId ? { ...prev, qrCode: qrCodeBase64 } : prev
-            );
+            
+            try {
+                await updateTableStatus(tableId, "Reserved");
+                alert("Thành công");
+                
+                setAreaTables((prev) =>
+                    prev.map((t) => t.id === tableId ? { ...t, qrCode: qrCodeBase64, status: "reserved" } : t)
+                );
+                // Open dialog for this table to show the QR
+                setSelectedTable((prev: any) =>
+                    prev?.id === tableId ? { ...prev, qrCode: qrCodeBase64, status: "reserved" } : prev
+                );
+            } catch (statusErr) {
+                alert("Lỗi hệ thống");
+                
+                // Fallback to updating QR code only without changing status locally
+                setAreaTables((prev) =>
+                    prev.map((t) => t.id === tableId ? { ...t, qrCode: qrCodeBase64 } : t)
+                );
+                setSelectedTable((prev: any) =>
+                    prev?.id === tableId ? { ...prev, qrCode: qrCodeBase64 } : prev
+                );
+            }
         } catch (err: any) {
             console.error("Không thể tạo QR Code:", err);
+            // Revert state if it fails
+            setAreaTables((prev) =>
+                prev.map((t) => t.id === tableId ? { ...t, status: "available" } : t)
+            );
+            setSelectedTable((prev: any) =>
+                prev?.id === tableId ? { ...prev, status: "available" } : prev
+            );
+            alert("Lỗi khi tạo QR: " + (err.message || "Không xác định"));
         } finally {
             setGeneratingQRFor(null);
+        }
+    };
+
+    const handleRefreshQR = async (tableId: string) => {
+        setRefreshingQRFor(tableId);
+        try {
+            console.log("Calling refreshQrSession for table:", tableId);
+            const res = await refreshQrSession(tableId);
+            console.log("Refresh API response:", res);
+            
+            // Due to the Wrapper ApiResponse<T> in http-client, the data object is accessed via res.data
+            // However, our TableCards and Table logic depends on extracting the base64 code that's inside res.data
+            const qrCodeBase64 = (res as any)?.data?.qrCodeBase64 || (res as any)?.qrCodeBase64; 
+            
+            if (!qrCodeBase64 || qrCodeBase64 === "null") {
+                console.warn("QR code received is empty or null string", qrCodeBase64);
+                alert("QR Code không khả dụng từ máy chủ. Vui lòng thử lại sau.");
+            }
+            
+            setAreaTables((prev) =>
+                prev.map((t) => t.id === tableId ? { ...t, qrCode: qrCodeBase64 || null } : t)
+            );
+            setSelectedTable((prev: any) =>
+                prev?.id === tableId ? { ...prev, qrCode: qrCodeBase64 || null } : prev
+            );
+        } catch (err: any) {
+            console.error("Không thể tải lại QR Code:", err);
+            alert("Lỗi khi tải lại QR: " + (err.message || "Không xác định"));
+        } finally {
+            setRefreshingQRFor(null);
         }
     };
 
@@ -250,6 +308,8 @@ export default function TablesPage() {
                                     onClick={() => setSelectedTable(table)}
                                     onGenerateQR={isWaiter ? () => handleGenerateQR(table.id) : undefined}
                                     isGeneratingQR={generatingQRFor === table.id}
+                                    onRefreshQR={isWaiter ? () => handleRefreshQR(table.id) : undefined}
+                                    isRefreshingQR={refreshingQRFor === table.id}
                                 />
                             ))}
                         </div>
@@ -301,13 +361,13 @@ export default function TablesPage() {
                                  : selectedTable?.status}
                             </span>
                         </div>
-                        {selectedTable?.qrCode && (
+                        {selectedTable?.qrCode && selectedTable.qrCode !== "null" && selectedTable.qrCode.length > 100 ? (
                             <div className="flex flex-col items-center gap-3 pt-2">
                                 <p className="text-xs text-muted-foreground">Mã QR</p>
                                 <img
-                                    src={`data:image/png;base64,${selectedTable.qrCode}`}
+                                    src={selectedTable.qrCode.startsWith("data:image") || selectedTable.qrCode.startsWith("http") ? selectedTable.qrCode : `data:image/png;base64,${selectedTable.qrCode}`}
                                     alt={`QR Code bàn ${selectedTable.tableNumber}`}
-                                    className="w-48 h-48 rounded-lg border"
+                                    className="w-48 h-48 rounded-lg border object-contain bg-white"
                                 />
                                 <Button
                                     variant="outline"
@@ -319,6 +379,22 @@ export default function TablesPage() {
                                     Tải xuống
                                 </Button>
                             </div>
+                        ) : (
+                            selectedTable && selectedTable.status !== "available" && isWaiter && (
+                                <div className="flex flex-col items-center gap-3 pt-2 mt-2">
+                                    <p className="text-xs text-muted-foreground text-center">Bàn đang hoạt động nhưng chưa hiển thị mã QR.</p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1.5"
+                                        onClick={() => handleRefreshQR(selectedTable.id)}
+                                        disabled={refreshingQRFor === selectedTable.id}
+                                    >
+                                        <RefreshCw size={14} className={refreshingQRFor === selectedTable.id ? "animate-spin" : ""} />
+                                        {refreshingQRFor === selectedTable.id ? "Đang tải..." : "Tải lại QR"}
+                                    </Button>
+                                </div>
+                            )
                         )}
                     </div>
                     <DialogFooter>

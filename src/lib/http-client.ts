@@ -54,12 +54,20 @@ async function request<T>(
         headers,
     });
 
-    const data = await response.json().catch(() => ({
-        data: null,
-        succeeded: false,
-        message: "Failed to parse server response",
-        errors: [],
-    }));
+    const textData = await response.text();
+    let data;
+    try {
+        data = textData ? JSON.parse(textData) : {};
+    } catch (e) {
+        console.error("JSON Parse Error for URL:", url);
+        console.error("Raw response text:", textData);
+        data = {
+            data: null,
+            succeeded: response.ok,
+            message: "Failed to parse server response",
+            errors: [],
+        };
+    }
 
     if (!response.ok || !data.succeeded) {
         const error: ApiError = {
