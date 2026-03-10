@@ -5,7 +5,7 @@
 
 // Base URL — reads from env, falls back to default
 export const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "https://localhost:7260";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5015";
 
 // ==================== AUTH ====================
 export const API_ENDPOINTS = {
