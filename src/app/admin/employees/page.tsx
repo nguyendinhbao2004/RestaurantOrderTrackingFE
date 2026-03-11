@@ -28,6 +28,7 @@ const roleColors: Record<Role, string> = {
     chef: "bg-orange-500",
     waiter: "bg-blue-500",
     cashier: "bg-emerald-500",
+    customer: "bg-gray-500",
 };
 
 export default function EmployeesPage() {
