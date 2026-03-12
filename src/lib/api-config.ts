@@ -58,4 +58,9 @@ export const API_ENDPOINTS = {
         list: `${API_BASE_URL}/api/Employee`,
         detail: (id: string) => `${API_BASE_URL}/api/Employee/${id}`,
     },
+
+    // ==================== CUSTOMERS ====================
+    customers: {
+        byAccount: (accountId: string) => `${API_BASE_URL}/api/Customer/account/${accountId}`,
+    },
 } as const;

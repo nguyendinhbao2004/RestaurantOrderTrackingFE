@@ -48,6 +48,7 @@ import { useOrder } from "@/contexts/OrderContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
+import { fetchCustomerByAccountId } from "@/services/customer.service";
 import { mapProductsToMenuItems } from "@/lib/helpers";
 import { Category } from "@/types";
 import { formatCurrency } from "@/lib/helpers";
@@ -92,6 +93,7 @@ export default function CustomerPage() {
   });
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [orderId, setOrderId] = useState<string>("");
+  const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
 
   const {
     cart,
@@ -158,10 +160,28 @@ export default function CustomerPage() {
   }, [menuItems, selectedCategory, searchQuery]);
 
   // Checkout handlers
-  const handleStartCheckout = () => {
-    setCheckoutStep("delivery");
-    setShowCheckout(true);
-    setShowCart(false);
+  const handleStartCheckout = async () => {
+    try {
+      setIsLoadingCheckout(true);
+      if (user?.id) {
+        const response = await fetchCustomerByAccountId(user.id);
+        if (response.succeeded && response.data) {
+          setDeliveryInfo({
+            name: response.data.name || "",
+            phone: response.data.phone || "",
+            address: response.data.address || "",
+            notes: "",
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching customer info:", err);
+    } finally {
+      setIsLoadingCheckout(false);
+      setCheckoutStep("delivery");
+      setShowCheckout(true);
+      setShowCart(false);
+    }
   };
 
   const handlePlaceOrder = () => {
@@ -569,10 +589,20 @@ export default function CustomerPage() {
                 </div>
                 <Button
                   onClick={handleStartCheckout}
-                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full py-5 text-base"
+                  disabled={isLoadingCheckout}
+                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full py-5 text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Tiến hành thanh toán
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  {isLoadingCheckout ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Đang tải thông tin...
+                    </>
+                  ) : (
+                    <>
+                      Tiến hành thanh toán
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
