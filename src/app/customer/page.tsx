@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,12 @@ import {
   FileText,
   Clock,
   Star,
+  Bell,
+  Camera,
+  Eye,
+  EyeOff,
+  Lock,
+  Settings,
 } from "lucide-react";
 import { MenuItem } from "@/types";
 import { useOrder } from "@/contexts/OrderContext";
@@ -52,6 +58,7 @@ import { fetchCustomerByAccountId } from "@/services/customer.service";
 import { mapProductsToMenuItems } from "@/lib/helpers";
 import { Category } from "@/types";
 import { formatCurrency } from "@/lib/helpers";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 /* ──────────── types ──────────── */
 
@@ -81,6 +88,31 @@ export default function CustomerPage() {
 
   // Cart UI
   const [showCart, setShowCart] = useState(false);
+
+  // Notifications
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: "1", title: "Đơn hàng đã được xác nhận", desc: "Đơn #ORD-ABC123 đang được chuẩn bị", time: "2 phút trước", read: false },
+    { id: "2", title: "Món ăn đang được giao", desc: "Tài xế đang trên đường đến bạn", time: "15 phút trước", read: false },
+    { id: "3", title: "Khuyến mãi đặc biệt hôm nay", desc: "Giảm 20% cho đơn hàng tiếp theo của bạn", time: "1 giờ trước", read: true },
+    { id: "4", title: "Đánh giá đơn hàng của bạn", desc: "Hãy để lại đánh giá cho đơn #ORD-XYZ789", time: "2 giờ trước", read: true },
+  ]);
+
+  // Profile
+  const [showProfile, setShowProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Checkout
   const [showCheckout, setShowCheckout] = useState(false);
@@ -133,6 +165,13 @@ export default function CustomerPage() {
       .then((res) => setApiCategories(res.data))
       .catch(() => {});
   }, []);
+
+  // Sync profile name when user loads
+  useEffect(() => {
+    if (user?.name) {
+      setProfileForm((prev) => ({ ...prev, name: user.name ?? "" }));
+    }
+  }, [user]);
 
   // Categories
   const categories = useMemo(() => [
@@ -291,15 +330,41 @@ export default function CustomerPage() {
                   </Link>
                 </Button>
               ) : (
-                <div className="hidden sm:flex items-center gap-3">
-                  <div className="flex flex-col items-end">
-                    <span className="text-sm font-semibold leading-none">
-                      {user?.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground mt-0.5 capitalize">
-                      {user?.role}
-                    </span>
-                  </div>
+                <div className="hidden sm:flex items-center gap-2">
+                  {/* Bell */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative rounded-full h-9 w-9 text-muted-foreground hover:text-violet-600"
+                    onClick={() => setShowNotifications(true)}
+                  >
+                    <Bell className="w-4 h-4" />
+                    {notifications.filter((n) => !n.read).length > 0 && (
+                      <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+                    )}
+                  </Button>
+
+                  {/* Avatar + user info */}
+                  <button
+                    onClick={() => setShowProfile(true)}
+                    className="flex items-center gap-2.5 rounded-full pl-1 pr-3 py-1 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors group"
+                  >
+                    <Avatar className="h-8 w-8 border-2 border-violet-200 dark:border-violet-800">
+                      {avatarPreview ? (
+                        <AvatarImage src={avatarPreview} alt={user?.name} />
+                      ) : null}
+                      <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-xs font-bold">
+                        {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold leading-none group-hover:text-violet-600 transition-colors">
+                        {user?.name}
+                      </span>
+                    </div>
+                    <Settings className="w-3.5 h-3.5 text-muted-foreground group-hover:text-violet-500 transition-colors ml-0.5" />
+                  </button>
+
                   <Button
                     variant="ghost"
                     size="icon"
@@ -948,6 +1013,280 @@ export default function CustomerPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Notifications Dialog ─── */}
+      <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
+        <DialogContent className="sm:max-w-sm p-0 gap-0 max-h-[85vh] flex flex-col">
+          <DialogHeader className="px-5 pt-5 pb-3">
+            <DialogTitle className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-violet-600" />
+              Thông báo
+              {notifications.filter((n) => !n.read).length > 0 && (
+                <Badge className="bg-red-500 text-white text-xs h-5 px-1.5">
+                  {notifications.filter((n) => !n.read).length} mới
+                </Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              Cập nhật mới nhất về đơn hàng của bạn
+            </DialogDescription>
+          </DialogHeader>
+
+          <Separator />
+
+          <ScrollArea className="flex-1 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14">
+                <Bell className="w-12 h-12 text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground text-sm">Chưa có thông báo nào</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/50">
+                {notifications.map((notif) => (
+                  <div
+                    key={notif.id}
+                    className={`flex items-start gap-3 px-5 py-3.5 hover:bg-muted/40 transition-colors cursor-pointer ${!notif.read ? "bg-violet-50/60 dark:bg-violet-950/20" : ""}`}
+                    onClick={() =>
+                      setNotifications((prev) =>
+                        prev.map((n) => n.id === notif.id ? { ...n, read: true } : n)
+                      )
+                    }
+                  >
+                    <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${!notif.read ? "bg-gradient-to-br from-violet-500 to-purple-600" : "bg-muted"}`}>
+                      <Bell className={`w-3.5 h-3.5 ${!notif.read ? "text-white" : "text-muted-foreground"}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm leading-snug ${!notif.read ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+                        {notif.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notif.desc}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">{notif.time}</p>
+                    </div>
+                    {!notif.read && (
+                      <div className="flex-shrink-0 w-2 h-2 rounded-full bg-violet-500 mt-1.5" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          {notifications.some((n) => !n.read) && (
+            <>
+              <Separator />
+              <div className="px-5 py-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-full"
+                  onClick={() => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))}
+                >
+                  Đánh dấu tất cả đã đọc
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Profile Update Dialog ─── */}
+      <Dialog open={showProfile} onOpenChange={setShowProfile}>
+        <DialogContent className="sm:max-w-md p-0 gap-0 max-h-[90vh] flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-4 h-4 text-violet-600" />
+              Cập nhật hồ sơ
+            </DialogTitle>
+            <DialogDescription>
+              Chỉnh sửa thông tin cá nhân và bảo mật tài khoản
+            </DialogDescription>
+          </DialogHeader>
+
+          <Separator />
+
+          <ScrollArea className="flex-1 overflow-y-auto">
+            <div className="px-6 py-6 space-y-6">
+              {/* Avatar Upload */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative">
+                  <Avatar className="h-20 w-20 border-4 border-violet-100 dark:border-violet-900">
+                    {avatarPreview ? (
+                      <AvatarImage src={avatarPreview} alt="Avatar" />
+                    ) : null}
+                    <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-2xl font-bold">
+                      {profileForm.name?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Nhấp vào biểu tượng máy ảnh để tải ảnh lên</p>
+              </div>
+
+              {/* Personal Info */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <User className="w-4 h-4 text-violet-500" />
+                  Thông tin cá nhân
+                </h4>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Họ và tên</label>
+                  <Input
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Nhập họ và tên"
+                    className="rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    <Phone className="w-3.5 h-3.5 inline mr-1 text-violet-500" />
+                    Số điện thoại
+                  </label>
+                  <Input
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
+                    placeholder="Nhập số điện thoại"
+                    className="rounded-xl"
+                    type="tel"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    <MapPin className="w-3.5 h-3.5 inline mr-1 text-violet-500" />
+                    Địa chỉ
+                  </label>
+                  <Input
+                    value={profileForm.address}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, address: e.target.value }))}
+                    placeholder="Nhập địa chỉ"
+                    className="rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Change Password */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Lock className="w-4 h-4 text-violet-500" />
+                  Đổi mật khẩu
+                </h4>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Mật khẩu hiện tại</label>
+                  <div className="relative">
+                    <Input
+                      type={showCurrentPw ? "text" : "password"}
+                      value={profileForm.currentPassword}
+                      onChange={(e) => setProfileForm((p) => ({ ...p, currentPassword: e.target.value }))}
+                      placeholder="Nhập mật khẩu hiện tại"
+                      className="rounded-xl pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPw(!showCurrentPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showCurrentPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Mật khẩu mới</label>
+                  <div className="relative">
+                    <Input
+                      type={showNewPw ? "text" : "password"}
+                      value={profileForm.newPassword}
+                      onChange={(e) => setProfileForm((p) => ({ ...p, newPassword: e.target.value }))}
+                      placeholder="Nhập mật khẩu mới"
+                      className="rounded-xl pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPw(!showNewPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Xác nhận mật khẩu mới</label>
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPw ? "text" : "password"}
+                      value={profileForm.confirmPassword}
+                      onChange={(e) => setProfileForm((p) => ({ ...p, confirmPassword: e.target.value }))}
+                      placeholder="Nhập lại mật khẩu mới"
+                      className={`rounded-xl pr-10 ${profileForm.confirmPassword && profileForm.newPassword !== profileForm.confirmPassword ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPw(!showConfirmPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {profileForm.confirmPassword && profileForm.newPassword !== profileForm.confirmPassword && (
+                    <p className="text-xs text-red-500 mt-1">Mật khẩu xác nhận không khớp</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <Separator />
+          <div className="px-6 py-4 flex gap-3">
+            <Button
+              variant="outline"
+              className="rounded-full flex-1"
+              onClick={() => setShowProfile(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full"
+              disabled={
+                !!(profileForm.confirmPassword && profileForm.newPassword !== profileForm.confirmPassword)
+              }
+              onClick={() => {
+                // TODO: Gắn API cập nhật profile tại đây
+                setShowProfile(false);
+              }}
+            >
+              <CheckCircle2 className="w-4 h-4 mr-1.5" />
+              Lưu thay đổi
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { registerCustomerApi } from "@/services/auth.service";
-import { CheckCircle2, UserPlus, LogIn } from "lucide-react";
+import { CheckCircle2, UserPlus, LogIn, ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
     const [isLoginMode, setIsLoginMode] = useState(true);
@@ -112,18 +112,34 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background p-4">
+        <div className="min-h-screen bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+            {/* Top bar */}
+            <div className="w-full px-6 py-4 flex items-center justify-between border-b border-border/40 bg-white/60 dark:bg-black/20 backdrop-blur-sm">
+                <Link href="/" className="flex items-center gap-2.5 group">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center shadow-md shadow-violet-500/30 group-hover:scale-105 transition-transform">
+                        <span className="text-white font-bold text-sm">R</span>
+                    </div>
+                    <span className="font-bold text-base tracking-tight bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                        Restaurant
+                    </span>
+                </Link>
+
+                <Link
+                    href="/"
+                    className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-violet-600 transition-colors group"
+                >
+                    <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                    Quay về trang chủ
+                </Link>
+            </div>
+
+            <div className="flex items-center justify-center min-h-[calc(100vh-65px)] p-4">
             <div className="w-full max-w-md space-y-6">
-                {/* Logo - clickable to home */}
+                {/* Logo */}
                 <div className="text-center">
-                    <Link href="/" className="inline-block group">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 mb-4 group-hover:scale-105 transition-transform shadow-lg shadow-violet-500/30">
-                            <span className="text-white font-bold text-2xl">R</span>
-                        </div>
-                    </Link>
                     <h1 className="text-2xl font-bold">
                         <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                            Login
+                            Đăng nhập
                         </span>
                     </h1>
                     <p className="text-muted-foreground mt-2">
@@ -286,11 +302,9 @@ export default function LoginPage() {
 
                 {/* Customer Notice */}
                 <p className="text-center text-sm text-muted-foreground">
-                    Customers can access the menu via{" "}
-                    <a href="/order?table=1" className="text-violet-600 hover:underline">
-                        QR code
-                    </a>
+                    Customers can access the menu via QR code
                 </p>
+            </div>
             </div>
         </div>
     );

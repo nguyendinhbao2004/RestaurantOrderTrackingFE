@@ -157,7 +157,7 @@ export default function TablesPage() {
     };
 
     // General paginated tables (admin/cashier)
-    const { data, loading: apiLoading, error: apiError } = useTableApi(page, pageSize);
+    const { data, loading: apiLoading, error: apiError } = useTableApi(page, pageSize, !isWaiter);
 
     // Normalize to a unified shape
     const allTables = isWaiter
