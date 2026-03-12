@@ -21,12 +21,13 @@ export interface TableApiResponse {
   errors: string[];
 }
 
-export function useTableApi(pageIndex: number, pageSize: number) {
+export function useTableApi(pageIndex: number, pageSize: number, enabled = true) {
   const [data, setData] = useState<TableApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     setLoading(true);
     setError(null);
     fetch(
@@ -41,7 +42,7 @@ export function useTableApi(pageIndex: number, pageSize: number) {
         setError(err.message || "Failed to fetch tables");
         setLoading(false);
       });
-  }, [pageIndex, pageSize]);
+  }, [pageIndex, pageSize, enabled]);
 
   return { data, loading, error };
 }

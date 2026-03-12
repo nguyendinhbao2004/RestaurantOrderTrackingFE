@@ -84,12 +84,12 @@ export const protectedRoutes: Record<string, Role[]> = {
 };
 
 // Public routes that don't require authentication
-export const publicRoutes = ['/', '/login', '/order', '/customer'];
+export const publicRoutes = ['/', '/login', '/order', '/customer', '/menu'];
 
 // Check if a route is public
 export function isPublicRoute(pathname: string): boolean {
     return publicRoutes.some(route =>
-        pathname === route || pathname.startsWith('/order') || pathname.startsWith('/customer')
+        pathname === route || pathname.startsWith('/order') || pathname.startsWith('/customer') || pathname.startsWith('/menu')
     );
 }
 

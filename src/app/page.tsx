@@ -219,7 +219,7 @@ export default function Home() {
                   size="lg"
                   className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full px-8 py-6 text-base shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 transition-all hover:scale-[1.03]"
                 >
-                  <Link href="/order">
+                  <Link href="/menu">
                     <ShoppingCart className="w-5 h-5 mr-2" />
                     View Menu & Order
                   </Link>
@@ -391,7 +391,7 @@ export default function Home() {
                         ))}
                       </div>
                       <Link
-                        href="/order"
+                        href="/menu"
                         className="text-violet-600 text-sm font-semibold flex items-center gap-1 hover:gap-2 transition-all"
                       >
                         Order Now
@@ -410,7 +410,7 @@ export default function Home() {
                 size="lg"
                 className="rounded-full px-8 border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-violet-950/50"
               >
-                <Link href="/order">
+                <Link href="/menu">
                   Explore Full Menu
                   <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
@@ -552,7 +552,7 @@ export default function Home() {
                 size="lg"
                 className="bg-white text-violet-700 hover:bg-white/90 rounded-full px-10 py-6 text-base font-bold shadow-xl hover:shadow-2xl transition-all hover:scale-[1.03] relative z-10"
               >
-                <Link href="/order">
+                <Link href="/menu">
                   <ShoppingCart className="w-5 h-5 mr-2" />
                   Start Ordering Now
                 </Link>
@@ -587,7 +587,7 @@ export default function Home() {
                 <ul className="space-y-3 text-sm text-muted-foreground">
                   <li>
                     <Link
-                      href="/order"
+                      href="/menu"
                       className="hover:text-violet-600 transition-colors"
                     >
                       Menu & Order
