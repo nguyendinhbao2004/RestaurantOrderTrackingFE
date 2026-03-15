@@ -39,7 +39,13 @@ export const API_ENDPOINTS = {
         list: `${API_BASE_URL}/api/Order`,
         detail: (id: string) => `${API_BASE_URL}/api/Order/${id}`,
         create: `${API_BASE_URL}/api/Order`,
+        onlineCreate: `${API_BASE_URL}/api/Order/online`,
         updateStatus: (id: string) => `${API_BASE_URL}/api/Order/${id}/status`,
+    },
+
+    // ==================== PAYMENTS ====================
+    payments: {
+        createLink: `${API_BASE_URL}/api/Payment/create-link`,
     },
 
     // ==================== TABLES ====================
@@ -67,5 +73,10 @@ export const API_ENDPOINTS = {
     // ==================== ACCOUNTS ====================
     accounts: {
         list: `https://localhost:7260/api/Account`,
+    },
+
+    // ==================== BANKS ====================
+    banks: {
+        list: `https://api.vietqr.io/v2/banks`,
     },
 } as const;

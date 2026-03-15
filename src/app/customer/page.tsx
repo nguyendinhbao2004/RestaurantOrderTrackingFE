@@ -10,51 +10,28 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  ShoppingCart,
-  Search,
-  Plus,
-  Minus,
-  Trash2,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Loader2,
-  AlertCircle,
-  MapPin,
-  Phone,
-  User,
-  CreditCard,
-  Wallet,
-  Banknote,
-  CheckCircle2,
-  ShoppingBag,
-  LogIn,
-  LogOut,
-  ArrowRight,
-  FileText,
-  Clock,
-  Star,
-  Bell,
-  Camera,
-  Eye,
-  EyeOff,
-  Lock,
-  Settings,
+  ShoppingCart, Search, Plus, Minus, Trash2, ChevronLeft, ChevronRight, X,
+  Loader2, AlertCircle, MapPin, Phone, User, CreditCard, Wallet, Banknote,
+  CheckCircle2, ShoppingBag, LogIn, LogOut, ArrowRight, FileText, Clock,
+  Star, Bell, Camera, Eye, EyeOff, Lock, Settings, Copy, Check
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { MenuItem } from "@/types";
 import { useOrder } from "@/contexts/OrderContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBanks } from "@/contexts/BanksContext";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
 import { fetchCustomerByAccountId } from "@/services/customer.service";
+import {
+  ApiPaymentMethod,
+  PaymentLinkData,
+  createOnlineOrder,
+  createPaymentLink,
+} from "@/services/online-order.service";
 import { mapProductsToMenuItems } from "@/lib/helpers";
 import { Category } from "@/types";
 import { formatCurrency } from "@/lib/helpers";
@@ -71,6 +48,26 @@ interface DeliveryInfo {
 
 type PaymentMethod = "cod" | "bank" | "ewallet";
 type CheckoutStep = "delivery" | "payment" | "confirm" | "success";
+type CopyField = "accountNumber" | "amount" | "description";
+
+const PAYMENT_METHOD_TO_API_VALUE: Record<PaymentMethod, ApiPaymentMethod> = {
+  cod: ApiPaymentMethod.cash,
+  ewallet: ApiPaymentMethod.credit_card,
+  bank: ApiPaymentMethod.bank_transfer,
+};
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  return fallback;
+}
 
 /* ──────────── component ──────────── */
 
@@ -91,12 +88,7 @@ export default function CustomerPage() {
 
   // Notifications
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: "1", title: "Đơn hàng đã được xác nhận", desc: "Đơn #ORD-ABC123 đang được chuẩn bị", time: "2 phút trước", read: false },
-    { id: "2", title: "Món ăn đang được giao", desc: "Tài xế đang trên đường đến bạn", time: "15 phút trước", read: false },
-    { id: "3", title: "Khuyến mãi đặc biệt hôm nay", desc: "Giảm 20% cho đơn hàng tiếp theo của bạn", time: "1 giờ trước", read: true },
-    { id: "4", title: "Đánh giá đơn hàng của bạn", desc: "Hãy để lại đánh giá cho đơn #ORD-XYZ789", time: "2 giờ trước", read: true },
-  ]);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   // Profile
   const [showProfile, setShowProfile] = useState(false);
@@ -126,6 +118,13 @@ export default function CustomerPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [orderId, setOrderId] = useState<string>("");
   const [isLoadingCheckout, setIsLoadingCheckout] = useState(false);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [isCreatingPaymentLink, setIsCreatingPaymentLink] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [paymentLinkData, setPaymentLinkData] =
+    useState<PaymentLinkData | null>(null);
+  const [billId, setBillId] = useState<string>("");
+  const [copiedField, setCopiedField] = useState<CopyField | null>(null);
 
   const {
     cart,
@@ -138,6 +137,12 @@ export default function CustomerPage() {
   } = useOrder();
 
   const { isAuthenticated, logout, user } = useAuth();
+  const { findBankByBin } = useBanks();
+
+  const selectedBank = useMemo(() => {
+    if (!paymentLinkData?.bin) return undefined;
+    return findBankByBin(paymentLinkData.bin);
+  }, [findBankByBin, paymentLinkData]);
 
   // Fetch products
   const loadProducts = useCallback(async () => {
@@ -199,9 +204,26 @@ export default function CustomerPage() {
   }, [menuItems, selectedCategory, searchQuery]);
 
   // Checkout handlers
+  const resetCheckoutState = useCallback(() => {
+    setCheckoutStep("delivery");
+    setDeliveryInfo({ name: "", phone: "", address: "", notes: "" });
+    setPaymentMethod("cod");
+    setOrderId("");
+    setCheckoutError(null);
+    setPaymentLinkData(null);
+    setBillId("");
+    setCopiedField(null);
+    setIsSubmittingOrder(false);
+    setIsCreatingPaymentLink(false);
+  }, []);
+
   const handleStartCheckout = async () => {
     try {
       setIsLoadingCheckout(true);
+      setCheckoutError(null);
+      setPaymentLinkData(null);
+      setBillId("");
+      setCopiedField(null);
       if (user?.id) {
         const response = await fetchCustomerByAccountId(user.id);
         if (response.succeeded && response.data) {
@@ -223,19 +245,96 @@ export default function CustomerPage() {
     }
   };
 
-  const handlePlaceOrder = () => {
-    const id = `ORD-${Date.now().toString(36).toUpperCase()}`;
-    setOrderId(id);
+  const handleCreatePaymentLink = useCallback(async (currentBillId: string) => {
+    setIsCreatingPaymentLink(true);
+    setCheckoutError(null);
+
+    try {
+      const paymentResponse = await createPaymentLink({ billId: currentBillId });
+      setPaymentLinkData(paymentResponse.data);
+    } catch (error) {
+      setCheckoutError(
+        getApiErrorMessage(
+          error,
+          "Không thể tạo mã QR thanh toán. Vui lòng thử lại.",
+        ),
+      );
+    } finally {
+      setIsCreatingPaymentLink(false);
+    }
+  }, []);
+
+  const handleSubmitOnlineOrder = useCallback(async () => {
+    if (cart.length === 0) {
+      setCheckoutError("Giỏ hàng trống. Vui lòng thêm món trước khi thanh toán.");
+      return;
+    }
+
+    setIsSubmittingOrder(true);
+    setCheckoutError(null);
+
+    try {
+      const response = await createOnlineOrder({
+        customerName: deliveryInfo.name.trim(),
+        customerPhone: deliveryInfo.phone.trim(),
+        customerAddress: deliveryInfo.address.trim(),
+        paymentMethod: PAYMENT_METHOD_TO_API_VALUE[paymentMethod],
+        items: cart.map((item) => ({
+          productId: item.menuItem.id,
+          note: item.notes?.trim() || "",
+          quantity: item.quantity,
+        })),
+      });
+
+      setOrderId(response.data.orderId);
+      setBillId(response.data.billId);
+      clearCart();
+
+      if (response.data.paymentMethod === ApiPaymentMethod.bank_transfer) {
+        setCheckoutStep("confirm");
+        await handleCreatePaymentLink(response.data.billId);
+        return;
+      }
+
+      setCheckoutStep("success");
+    } catch (error) {
+      setCheckoutError(
+        getApiErrorMessage(
+          error,
+          "Không thể tạo đơn online. Vui lòng thử lại.",
+        ),
+      );
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  }, [
+    cart,
+    clearCart,
+    deliveryInfo.address,
+    deliveryInfo.name,
+    deliveryInfo.phone,
+    handleCreatePaymentLink,
+    paymentMethod,
+  ]);
+
+  const handleMarkTransferCompleted = () => {
     setCheckoutStep("success");
-    clearCart();
   };
 
-  const handleCloseCheckout = () => {
-    setShowCheckout(false);
-    if (checkoutStep === "success") {
-      setDeliveryInfo({ name: "", phone: "", address: "", notes: "" });
-      setPaymentMethod("cod");
-      setOrderId("");
+  const handleCloseCheckout = (open: boolean) => {
+    setShowCheckout(open);
+    if (!open) resetCheckoutState();
+  };
+
+  const handleCopyTransferValue = async (field: CopyField, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      setTimeout(() => {
+        setCopiedField((current) => (current === field ? null : current));
+      }, 1500);
+    } catch {
+      setCheckoutError("Không thể sao chép. Vui lòng thử lại.");
     }
   };
 
@@ -677,7 +776,7 @@ export default function CustomerPage() {
 
       {/* ─── Checkout Dialog ─── */}
       <Dialog open={showCheckout} onOpenChange={handleCloseCheckout}>
-        <DialogContent className="sm:max-w-lg p-0 gap-0 max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-2xl lg:max-w-3xl p-0 gap-0 max-h-[90vh] flex flex-col w-[95vw]">
           {checkoutStep !== "success" && (
             <>
               <DialogHeader className="px-6 pt-6 pb-4">
@@ -685,7 +784,7 @@ export default function CustomerPage() {
                 <DialogDescription>
                   {checkoutStep === "delivery" && "Nhập thông tin giao hàng"}
                   {checkoutStep === "payment" && "Chọn phương thức thanh toán"}
-                  {checkoutStep === "confirm" && "Xem lại và xác nhận đơn hàng"}
+                  {checkoutStep === "confirm" && "Quét mã QR để hoàn tất chuyển khoản"}
                 </DialogDescription>
               </DialogHeader>
 
@@ -737,70 +836,190 @@ export default function CustomerPage() {
           {/* Step 3: Confirm — custom layout so only items list scrolls */}
           {checkoutStep === "confirm" && (
             <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div className="px-6 pt-5 space-y-3 flex-shrink-0">
-                {/* Delivery Summary */}
-                <div className="bg-muted/50 rounded-2xl p-4 space-y-2">
-                  <h4 className="font-semibold text-sm flex items-center gap-1.5">
-                    <MapPin className="w-4 h-4 text-violet-500" />
-                    Giao đến
-                  </h4>
-                  <p className="text-sm">
-                    {deliveryInfo.name} · {deliveryInfo.phone}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {deliveryInfo.address}
-                  </p>
-                  {deliveryInfo.notes && (
-                    <p className="text-xs text-muted-foreground italic">
-                      Ghi chú: {deliveryInfo.notes}
-                    </p>
-                  )}
-                </div>
-
-                {/* Payment Summary */}
-                <div className="bg-muted/50 rounded-2xl p-4">
-                  <h4 className="font-semibold text-sm flex items-center gap-1.5 mb-2">
-                    <CreditCard className="w-4 h-4 text-violet-500" />
-                    Phương thức thanh toán
-                  </h4>
-                  <p className="text-sm">
-                    {
-                      paymentOptions.find((o) => o.value === paymentMethod)
-                        ?.label
-                    }
-                  </p>
-                </div>
-
-                {/* Items header */}
-                <h4 className="font-semibold text-sm">
-                  Các món đã đặt ({getCartItemCount()})
-                </h4>
+              <div className="px-5 pt-4 pb-3 flex-shrink-0">
+                <p className="text-sm text-muted-foreground">
+                  Mở app ngân hàng bất kỳ để quét VietQR hoặc chuyển khoản đúng nội dung bên dưới.
+                </p>
               </div>
 
-              {/* Scrollable items list */}
-              <ScrollArea className="flex-1 px-6 pb-4 overflow-y-auto">
-                <div className="space-y-2 pr-4 pt-2">
-                  {cart.map((item) => (
-                    <div
-                      key={item.menuItem.id}
-                      className="flex justify-between items-center text-sm"
-                    >
-                      <span className="text-muted-foreground">
-                        {item.quantity}x {item.menuItem.name}
-                      </span>
-                      <span className="font-medium">
-                        {formatCurrency(item.menuItem.price * item.quantity)}
-                      </span>
-                    </div>
-                  ))}
+              {isCreatingPaymentLink ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 px-5 pb-6">
+                  <Loader2 className="w-10 h-10 animate-spin text-violet-600" />
+                  <p className="font-semibold text-center">Đang tạo mã QR thanh toán...</p>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Vui lòng chờ trong giây lát.
+                  </p>
                 </div>
-              </ScrollArea>
+              ) : paymentLinkData ? (
+                <>
+                  <ScrollArea className="flex-1 min-h-0">
+                    <div className="px-5 pb-4 space-y-4">
+                      <div className="grid gap-6 md:grid-cols-[260px_minmax(0,400px)] justify-center">
+                      <div className="border rounded-2xl p-3 bg-white w-fit mx-auto md:mx-0 flex-shrink-0">
+                        <QRCodeSVG
+                          value={paymentLinkData.qrCode}
+                          size={250}
+                          includeMargin
+                          level="H"
+                        />
+                      </div>
+
+                      <div className="space-y-3 min-w-0">
+                        <div className="flex items-center gap-3">
+                          {selectedBank?.logo ? (
+                            <Image
+                              src={selectedBank.logo}
+                              alt={selectedBank.shortName || "Bank logo"}
+                              width={100}
+                              height={100}
+                              className="rounded-lg border bg-white object-contain"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 rounded-lg bg-muted border" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-muted-foreground">Ngân hàng</p>
+                            <p className="font-semibold text-sm truncate">
+                              {selectedBank?.name || `BIN ${paymentLinkData.bin}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2 border rounded-xl p-2.5 bg-muted/20">
+                            <div className="min-w-0 pr-2">
+                              <p className="text-xs text-muted-foreground">Chủ tài khoản</p>
+                              <p className="font-semibold text-sm truncate">{paymentLinkData.accountName}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 border rounded-xl p-2.5 bg-muted/20">
+                            <div className="min-w-0 pr-2">
+                              <p className="text-xs text-muted-foreground">Số tài khoản</p>
+                              <p className="font-semibold text-sm truncate">{paymentLinkData.accountNumber}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="rounded-lg h-7 text-xs px-2.5 flex-shrink-0"
+                              onClick={() =>
+                                void handleCopyTransferValue(
+                                  "accountNumber",
+                                  paymentLinkData.accountNumber,
+                                )
+                              }
+                            >
+                              {copiedField === "accountNumber" ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 mr-1" />
+                                  Đã chép
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 mr-1" />
+                                  Sao chép
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3 border rounded-xl p-3">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Số tiền</p>
+                              <p className="font-semibold">{formatCurrency(paymentLinkData.amount)}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="rounded-lg"
+                              onClick={() =>
+                                void handleCopyTransferValue(
+                                  "amount",
+                                  paymentLinkData.amount.toString(),
+                                )
+                              }
+                            >
+                              {copiedField === "amount" ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 mr-1" />
+                                  Đã chép
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 mr-1" />
+                                  Sao chép
+                                </>
+                              )}
+                            </Button>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3 border rounded-xl p-3">
+                            <div className="min-w-0">
+                              <p className="text-sm text-muted-foreground">Nội dung</p>
+                              <p className="font-semibold break-all">{paymentLinkData.description}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="rounded-lg"
+                              onClick={() =>
+                                void handleCopyTransferValue(
+                                  "description",
+                                  paymentLinkData.description,
+                                )
+                              }
+                            >
+                              {copiedField === "description" ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 mr-1" />
+                                  Đã chép
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 mr-1" />
+                                  Sao chép
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    </div>
+                  </ScrollArea>
+
+                  <div className="px-5 pt-1 pb-3 flex-shrink-0">
+                    <div className="mx-auto w-fit max-w-full rounded-lg border border-amber-200/55 bg-amber-50/45 px-4 py-2">
+                      <p className="text-sm text-amber-800/90 leading-snug">
+                        Lưu ý: Vui lòng nhập chính xác số tiền và nội dung chuyển khoản để hệ thống tự động đối soát.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 pb-8 text-center">
+                  <AlertCircle className="w-10 h-10 text-destructive" />
+                  <p className="font-semibold">Không thể hiển thị mã QR thanh toán</p>
+                  <p className="text-sm text-muted-foreground">
+                    {checkoutError || "Bạn có thể thử tạo lại mã QR hoặc quay lại sau."}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
           {checkoutStep !== "confirm" && (
           <ScrollArea className="flex-1">
             <div className="px-6 py-6">
+              {checkoutError && (
+                <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  {checkoutError}
+                </div>
+              )}
+
               {/* Step 1: Delivery Info */}
               {checkoutStep === "delivery" && (
                 <div className="space-y-4">
@@ -953,7 +1172,7 @@ export default function CustomerPage() {
                   </div>
 
                   <Button
-                    onClick={handleCloseCheckout}
+                    onClick={() => handleCloseCheckout(false)}
                     className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full px-8"
                   >
                     Tiếp tục mua sắm
@@ -966,43 +1185,58 @@ export default function CustomerPage() {
 
           {/* Footer buttons */}
           {checkoutStep !== "success" && (
-            <>
-              <Separator />
-              {checkoutStep === "confirm" && (
-                <div className="flex justify-between items-center px-6 pt-4">
-                  <span className="font-bold">Tổng cộng</span>
-                  <span className="text-xl font-bold text-violet-600">
-                    {formatCurrency(getCartTotal())}
-                  </span>
-                </div>
-              )}
+            <div className="flex-shrink-0 bg-background border-t border-border/50">
               <div className="px-6 py-4 flex gap-3">
-                {checkoutStep !== "delivery" && (
+                {checkoutStep === "payment" && (
                   <Button
                     variant="outline"
                     className="rounded-full"
-                    onClick={() =>
-                      setCheckoutStep(
-                        checkoutStep === "confirm" ? "payment" : "delivery",
-                      )
-                    }
+                    onClick={() => setCheckoutStep("delivery")}
+                    disabled={isSubmittingOrder || isCreatingPaymentLink}
                   >
                     <ChevronLeft className="w-4 h-4 mr-1" />
                     Quay lại
                   </Button>
                 )}
+
+                {checkoutStep === "confirm" && !paymentLinkData && billId && (
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => void handleCreatePaymentLink(billId)}
+                    disabled={isCreatingPaymentLink || isSubmittingOrder}
+                  >
+                    Thử lại mã QR
+                  </Button>
+                )}
+
                 <Button
                   className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full"
-                  disabled={checkoutStep === "delivery" && !isDeliveryValid}
+                  disabled={
+                    (checkoutStep === "delivery" && !isDeliveryValid) ||
+                    isSubmittingOrder ||
+                    isCreatingPaymentLink ||
+                    (checkoutStep === "confirm" && !paymentLinkData)
+                  }
                   onClick={() => {
                     if (checkoutStep === "delivery") setCheckoutStep("payment");
                     else if (checkoutStep === "payment")
-                      setCheckoutStep("confirm");
-                    else handlePlaceOrder();
+                      void handleSubmitOnlineOrder();
+                    else handleMarkTransferCompleted();
                   }}
                 >
-                  {checkoutStep === "confirm" ? (
-                    <>Đặt hàng · {formatCurrency(getCartTotal())}</>
+                  {isSubmittingOrder ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Đang tạo đơn hàng...
+                    </>
+                  ) : isCreatingPaymentLink ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Đang tạo mã QR...
+                    </>
+                  ) : checkoutStep === "confirm" ? (
+                    <>Tôi đã chuyển khoản</>
                   ) : (
                     <>
                       Tiếp tục
@@ -1011,7 +1245,7 @@ export default function CustomerPage() {
                   )}
                 </Button>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -1074,7 +1308,7 @@ export default function CustomerPage() {
           </ScrollArea>
 
           {notifications.some((n) => !n.read) && (
-            <>
+            <div>
               <Separator />
               <div className="px-5 py-3">
                 <Button
@@ -1086,7 +1320,7 @@ export default function CustomerPage() {
                   Đánh dấu tất cả đã đọc
                 </Button>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
