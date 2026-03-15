@@ -4,6 +4,7 @@ import "./globals.css";
 import { OrderProvider } from "@/contexts/OrderContext";
 import { TableProvider } from "@/contexts/TableContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { BanksProvider } from "@/contexts/BanksContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,13 +32,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <AuthProvider>
-          <TableProvider>
-            <OrderProvider>
-              {children}
-            </OrderProvider>
-          </TableProvider>
-        </AuthProvider>
+        <BanksProvider>
+          <AuthProvider>
+            <TableProvider>
+              <OrderProvider>
+                {children}
+              </OrderProvider>
+            </TableProvider>
+          </AuthProvider>
+        </BanksProvider>
       </body>
     </html>
   );

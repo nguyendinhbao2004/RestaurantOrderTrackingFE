@@ -172,7 +172,7 @@ export default function Home() {
               size="sm"
               className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full px-6 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-shadow"
             >
-              <Link href="/customer">Order Now</Link>
+              <Link href="/menu">Order Now</Link>
             </Button>
           </div>
         </div>
