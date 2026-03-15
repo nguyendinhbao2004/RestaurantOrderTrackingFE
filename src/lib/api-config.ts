@@ -63,4 +63,9 @@ export const API_ENDPOINTS = {
     customers: {
         byAccount: (accountId: string) => `${API_BASE_URL}/api/Customer/account/${accountId}`,
     },
+
+    // ==================== ACCOUNTS ====================
+    accounts: {
+        list: `https://localhost:7260/api/Account`,
+    },
 } as const;

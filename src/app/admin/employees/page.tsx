@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Employee, Role } from "@/types";
+import { getAccountsApi, mapAccountToEmployee } from "@/services/account.service";
 
 const roleColors: Record<Role, string> = {
     admin: "bg-violet-500",
@@ -33,6 +34,12 @@ const roleColors: Record<Role, string> = {
 
 export default function EmployeesPage() {
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize] = useState(10);
+    const [hasNextPage, setHasNextPage] = useState(false);
+    const [hasPreviousPage, setHasPreviousPage] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
     const [formData, setFormData] = useState({
@@ -42,6 +49,37 @@ export default function EmployeesPage() {
         role: "waiter" as Role,
     });
     const [filterRole, setFilterRole] = useState<Role | "all">("all");
+
+    // Fetch employees from API
+    useEffect(() => {
+        const fetchEmployees = async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
+                const response = await getAccountsApi(currentPage, pageSize);
+                
+                if (response.succeeded && response.data) {
+                    const mappedEmployees = response.data.map(mapAccountToEmployee);
+                    setEmployees(mappedEmployees);
+                    
+                    // Update pagination state
+                    if (response.meta?.pagination) {
+                        setHasNextPage(response.meta.pagination.hasNextPage);
+                        setHasPreviousPage(response.meta.pagination.hasPreviousPage);
+                    }
+                } else {
+                    setError(response.message || "Failed to fetch employees");
+                }
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "An error occurred");
+                setEmployees([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchEmployees();
+    }, [currentPage, pageSize]);
 
     const filteredEmployees =
         filterRole === "all"
@@ -204,57 +242,110 @@ export default function EmployeesPage() {
                     <CardTitle>Staff Members ({filteredEmployees.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        {filteredEmployees.map((employee) => (
-                            <div
-                                key={employee.id}
-                                className="flex items-center gap-4 p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors"
+                    {isLoading && (
+                        <div className="text-center py-8">
+                            <p className="text-muted-foreground">Loading employees...</p>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="text-center py-8">
+                            <p className="text-destructive mb-4">{error}</p>
+                            <Button
+                                onClick={() => setCurrentPage(currentPage)}
+                                variant="outline"
                             >
-                                <Avatar className="h-12 w-12">
-                                    <AvatarImage src={employee.avatar} alt={employee.name} />
-                                    <AvatarFallback>
-                                        {employee.name
-                                            .split(" ")
-                                            .map((n) => n[0])
-                                            .join("")}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <p className="font-medium">{employee.name}</p>
-                                        <Badge
-                                            className={`${roleColors[employee.role]} text-white text-xs`}
-                                        >
-                                            {employee.role}
-                                        </Badge>
+                                Retry
+                            </Button>
+                        </div>
+                    )}
+
+                    {!isLoading && !error && filteredEmployees.length === 0 && (
+                        <div className="text-center py-8">
+                            <p className="text-muted-foreground">No employees found</p>
+                        </div>
+                    )}
+
+                    {!isLoading && !error && filteredEmployees.length > 0 && (
+                        <>
+                            <div className="space-y-4">
+                                {filteredEmployees.map((employee) => (
+                                    <div
+                                        key={employee.id}
+                                        className="flex items-center gap-4 p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors"
+                                    >
+                                        <Avatar className="h-12 w-12">
+                                            <AvatarImage src={employee.avatar} alt={employee.name} />
+                                            <AvatarFallback>
+                                                {employee.name
+                                                    .split(" ")
+                                                    .map((n) => n[0])
+                                                    .join("")}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-medium">{employee.name}</p>
+                                                <Badge
+                                                    className={`${roleColors[employee.role]} text-white text-xs`}
+                                                >
+                                                    {employee.role}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-sm text-muted-foreground truncate">
+                                                {employee.email}
+                                            </p>
+                                        </div>
+                                        <div className="hidden md:block text-sm text-muted-foreground">
+                                            {employee.phone}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleOpenDialog(employee)}
+                                            >
+                                                Edit
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-destructive hover:text-destructive"
+                                                onClick={() => handleDelete(employee.id)}
+                                            >
+                                                Delete
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <p className="text-sm text-muted-foreground truncate">
-                                        {employee.email}
-                                    </p>
-                                </div>
-                                <div className="hidden md:block text-sm text-muted-foreground">
-                                    {employee.phone}
+                                ))}
+                            </div>
+
+                            {/* Pagination Controls */}
+                            <div className="flex justify-between items-center mt-6 pt-4 border-t">
+                                <div className="text-sm text-muted-foreground">
+                                    Page {currentPage}
                                 </div>
                                 <div className="flex gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleOpenDialog(employee)}
-                                    >
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="text-destructive hover:text-destructive"
-                                        onClick={() => handleDelete(employee.id)}
-                                    >
-                                        Delete
-                                    </Button>
+                                    {hasPreviousPage && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setCurrentPage(currentPage - 1)}
+                                        >
+                                            Previous
+                                        </Button>
+                                    )}
+                                    {hasNextPage && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setCurrentPage(currentPage + 1)}
+                                        >
+                                            Next
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        </>
+                    )}
                 </CardContent>
             </Card>
 
