@@ -1,6 +1,5 @@
 import { User, Role } from '@/types';
 
-// Key dùng để lưu trong localStorage
 const TOKEN_KEY = 'restaurant_auth_token';
 
 interface JwtPayload {
@@ -20,7 +19,6 @@ function normalizeRole(role: unknown): Role | null {
     return VALID_ROLES.includes(normalizedRole) ? normalizedRole : null;
 }
 
-// Giải mã Base64Url chuẩn xác cho JWT
 function decodeBase64Url(value: string): string {
     const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
     const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
@@ -29,7 +27,6 @@ function decodeBase64Url(value: string): string {
     return new TextDecoder().decode(bytes);
 }
 
-// Hàm parse Payload từ JWT (JWT luôn có 3 phần: Header.Payload.Signature)
 function parseJwtPayload(token: string): JwtPayload | null {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -41,15 +38,13 @@ function parseJwtPayload(token: string): JwtPayload | null {
     }
 }
 
-// Đổi tên từ verifyToken -> getUserFromToken vì Frontend chỉ "Đọc" chứ không "Xác thực" chữ ký
 export function getUserFromToken(token: string): User | null {
     const jwtPayload = parseJwtPayload(token);
     
     if (!jwtPayload) return null;
 
-    // Kiểm tra Token đã hết hạn chưa
     if (typeof jwtPayload.exp === 'number' && jwtPayload.exp * 1000 < Date.now()) {
-        removeToken(); // Xóa luôn token cũ nếu phát hiện hết hạn
+        removeToken();
         return null;
     }
 
@@ -57,7 +52,6 @@ export function getUserFromToken(token: string): User | null {
     const id = jwtPayload.sub || '';
     const userName = jwtPayload.unique_name || jwtPayload.email || '';
 
-    // Nếu thiếu thông tin quan trọng, coi như token không hợp lệ
     if (!id || !role) {
         return null;
     }
@@ -127,10 +121,8 @@ export function isPublicRoute(pathname: string): boolean {
 }
 
 export function hasRouteAccess(pathname: string, userRole: Role | null): boolean {
-    // Luôn cho phép truy cập public routes
     if (isPublicRoute(pathname)) return true;
 
-    // Không có role (chưa đăng nhập) => từ chối
     if (!userRole) return false;
 
     // Kiểm tra quyền theo prefix của route
@@ -139,7 +131,6 @@ export function hasRouteAccess(pathname: string, userRole: Role | null): boolean
             return roles.includes(userRole);
         }
     }
-
-    // Mặc định từ chối nếu route không có trong danh sách public/protected hợp lệ
+    
     return false;
 }
