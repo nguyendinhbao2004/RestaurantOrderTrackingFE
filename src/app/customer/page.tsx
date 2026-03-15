@@ -848,7 +848,7 @@ export default function CustomerPage() {
                           address: e.target.value,
                         }))
                       }
-                      placeholder="Nhập địa chỉ giao hàng"
+                      placeholder="Nhập số nhà, tên đường..."
                       className="rounded-xl"
                     />
                   </div>

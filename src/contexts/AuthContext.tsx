@@ -7,7 +7,7 @@ import {
     getToken,
     setToken,
     removeToken,
-    verifyToken,
+    getUserFromToken,
     roleRedirectPaths,
     hasRouteAccess,
     isPublicRoute,
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const token = getToken();
         if (token) {
-            const storedUser = verifyToken(token);
+            const storedUser = getUserFromToken(token);
             if (storedUser) {
                 storedUser.areaId = localStorage.getItem(AREA_ID_KEY) || undefined;
                 setUser(storedUser);
