@@ -7,10 +7,10 @@ export function Footer() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
                     <div className="md:col-span-1">
                         <Link href="/" className="flex items-center gap-2 mb-4">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-xl bg-violet-500 flex items-center justify-center">
                                 <span className="text-white font-bold text-lg">S</span>
                             </div>
-                            <span className="text-xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+                            <span className="text-xl font-bold text-violet-600">
                                 Studio
                             </span>
                         </Link>

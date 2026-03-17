@@ -30,7 +30,7 @@ export default function CashierPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 to-background dark:from-emerald-950/20 dark:to-background">
+    <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -56,7 +56,7 @@ export default function CashierPage() {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold">
-                  <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  <span className="text-violet-600">
                     Cashier Dashboard
                   </span>
                 </h1>

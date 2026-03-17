@@ -24,7 +24,7 @@ export default function AdminDashboardPage() {
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold">
-                    <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                    <span className="text-violet-600">
                         Dashboard
                     </span>
                 </h1>
@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
                                     key={dish.menuItem.id}
                                     className="flex items-center gap-4"
                                 >
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-bold">
+                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-violet-600 text-white text-sm font-bold">
                                         {index + 1}
                                     </div>
                                     <div className="flex-1 min-w-0">

@@ -211,7 +211,7 @@ export default function TablesPage() {
                             </Button>
                         )}
                         <div>
-                            <h1 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                            <h1 className="text-xl font-bold text-violet-600">
                                 Quản lý bàn ăn
                             </h1>
                             <p className="text-sm text-muted-foreground">

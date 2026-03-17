@@ -30,7 +30,7 @@ export default function LoginPage() {
     // Show loading while checking auth state
     if (authLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+            <div className="min-h-screen flex items-center justify-center bg-violet-50/50 dark:bg-violet-950/20">
                 <div className="animate-spin h-8 w-8 border-4 border-violet-600 border-t-transparent rounded-full"></div>
             </div>
         );
@@ -39,7 +39,7 @@ export default function LoginPage() {
     // Redirect if already authenticated
     if (isAuthenticated) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-violet-50/50 dark:bg-violet-950/20">
                 <div className="animate-spin h-8 w-8 border-4 border-violet-600 border-t-transparent rounded-full mb-4"></div>
                 <p className="text-muted-foreground mb-4">Redirecting...</p>
                 <button 
@@ -112,14 +112,14 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+        <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
             {/* Top bar */}
             <div className="w-full px-6 py-4 flex items-center justify-between border-b border-border/40 bg-white/60 dark:bg-black/20 backdrop-blur-sm">
                 <Link href="/" className="flex items-center gap-2.5 group">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center shadow-md shadow-violet-500/30 group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500 flex items-center justify-center shadow-md shadow-violet-500/30 group-hover:scale-105 transition-transform">
                         <span className="text-white font-bold text-sm">R</span>
                     </div>
-                    <span className="font-bold text-base tracking-tight bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                    <span className="font-bold text-base tracking-tight text-violet-600">
                         Restaurant
                     </span>
                 </Link>
@@ -138,7 +138,7 @@ export default function LoginPage() {
                 {/* Logo */}
                 <div className="text-center">
                     <h1 className="text-2xl font-bold">
-                        <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                        <span className="text-violet-600">
                             Đăng nhập
                         </span>
                     </h1>
@@ -253,7 +253,7 @@ export default function LoginPage() {
                             <Button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-xl py-5"
+                                className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl py-5"
                             >
                                 {isLoading ? (
                                     <svg

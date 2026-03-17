@@ -149,7 +149,7 @@ export default function OrderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+    <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -175,7 +175,7 @@ export default function OrderPage() {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold">
-                  <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                  <span className="text-violet-600">
                     Restaurant Menu
                   </span>
                 </h1>
@@ -260,7 +260,7 @@ export default function OrderPage() {
                     <TabsTrigger
                       key={category.value}
                       value={category.value}
-                      className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-full px-4 shrink-0"
+                      className="data-[state=active]:bg-violet-600 data-[state=active]:text-white rounded-full px-4 shrink-0"
                     >
                       {category.label}
                     </TabsTrigger>
@@ -306,7 +306,7 @@ export default function OrderPage() {
                           disabled={isLoading}
                           className={`h-9 w-9 p-0 ${
                             page === pageIndex
-                              ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white border-0 hover:from-violet-700 hover:to-purple-700"
+                              ? "bg-violet-600 text-white border-0 hover:bg-violet-700"
                               : ""
                           }`}
                         >

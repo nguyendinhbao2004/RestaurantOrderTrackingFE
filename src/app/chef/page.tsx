@@ -30,7 +30,7 @@ export default function ChefPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-orange-50/50 to-background dark:from-orange-950/20 dark:to-background">
+        <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
             {/* Header */}
             <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
                 <div className="max-w-7xl mx-auto px-6 py-4">
@@ -46,7 +46,7 @@ export default function ChefPage() {
                             </Button>
                             <div>
                                 <h1 className="text-2xl font-bold">
-                                    <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                                    <span className="text-violet-600">
                                         Kitchen Dashboard
                                     </span>
                                 </h1>

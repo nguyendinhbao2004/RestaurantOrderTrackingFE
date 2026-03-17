@@ -69,7 +69,7 @@ export function MenuCard({ item }: MenuCardProps) {
         <Button
           onClick={() => addToCart(item)}
           disabled={!item.isAvailable}
-          className="w-full mt-auto bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white disabled:from-gray-400 disabled:to-gray-500"
+          className="w-full mt-auto bg-violet-600 hover:bg-violet-700 text-white disabled:bg-gray-400"
         >
           {item.isAvailable ? (
             <>

@@ -150,7 +150,7 @@ export default function EmployeesPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold">
-                        <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                        <span className="text-violet-600">
                             Employees
                         </span>
                     </h1>
@@ -176,7 +176,7 @@ export default function EmployeesPage() {
                     </Select>
                     <Button
                         onClick={() => handleOpenDialog()}
-                        className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
+                        className="bg-violet-600 hover:bg-violet-700 text-white"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -422,7 +422,7 @@ export default function EmployeesPage() {
                         </Button>
                         <Button
                             onClick={handleSave}
-                            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
+                            className="bg-violet-600 hover:bg-violet-700 text-white"
                         >
                             {editingEmployee ? "Save Changes" : "Add Employee"}
                         </Button>

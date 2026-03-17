@@ -176,7 +176,7 @@ export function OrderStatusDisplay({ order }: OrderStatusDisplayProps) {
                     {/* Progress line */}
                     <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted -z-0">
                         <div
-                            className="h-full bg-gradient-to-r from-violet-500 to-purple-500 transition-all duration-500"
+                            className="h-full bg-violet-500 transition-all duration-500"
                             style={{
                                 width: `${(currentStepIndex / (statusSteps.length - 1)) * 100}%`,
                             }}

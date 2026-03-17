@@ -78,7 +78,7 @@ export default function WaiterPage() {
       <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xl select-none shrink-0">
+            <div className="w-11 h-11 rounded-full bg-violet-500 flex items-center justify-center text-white font-bold text-xl select-none shrink-0">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -92,7 +92,7 @@ export default function WaiterPage() {
             </div>
           </div>
 
-          <h1 className="hidden md:block text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+          <h1 className="hidden md:block text-xl font-bold text-violet-600">
             Bảng điều khiển nhân viên
           </h1>
 

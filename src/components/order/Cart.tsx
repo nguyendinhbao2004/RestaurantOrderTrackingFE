@@ -191,7 +191,7 @@ export function Cart({ onPlaceOrder }: CartProps) {
         {selectedTable ? (
           <Button
             onClick={onPlaceOrder}
-            className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
+            className="w-full bg-violet-600 hover:bg-violet-700 text-white"
           >
             Place Order
           </Button>
