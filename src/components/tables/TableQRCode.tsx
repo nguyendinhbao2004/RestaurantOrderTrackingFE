@@ -168,7 +168,7 @@ export function TableQRCode({ table, baseUrl = "" }: TableQRCodeProps) {
                         </Button>
                         <Button
                             onClick={handlePrint}
-                            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white"
+                            className="bg-violet-600 hover:bg-violet-700 text-white"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"

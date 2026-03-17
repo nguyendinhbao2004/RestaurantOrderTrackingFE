@@ -34,10 +34,10 @@ export function VoiceOrderFeedback({
     if (!hasContent) return null;
 
     return (
-        <Card className="border-violet-500/30 bg-gradient-to-br from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20 backdrop-blur-sm shadow-lg shadow-violet-500/5 overflow-hidden">
+        <Card className="border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/20 backdrop-blur-sm shadow-lg shadow-violet-500/5 overflow-hidden">
             {/* Listening indicator bar */}
             {isListening && (
-                <div className="h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-violet-500 bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite]" />
+                <div className="h-1 bg-violet-500 bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite]" />
             )}
 
             <CardContent className="p-4 space-y-3">

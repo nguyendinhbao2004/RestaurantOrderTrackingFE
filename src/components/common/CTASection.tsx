@@ -6,8 +6,8 @@ export function CTASection() {
     return (
         <section className="py-24 relative overflow-hidden">
             {/* Background elements */}
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600" />
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:32px_32px]" />
+            <div className="absolute inset-0 bg-violet-600" />
+            <div className="absolute inset-0 bg-white/5" />
 
             {/* Floating orbs */}
             <div className="absolute top-0 left-1/4 w-64 h-64 bg-white/10 rounded-full blur-3xl" />

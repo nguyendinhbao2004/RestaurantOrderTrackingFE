@@ -43,7 +43,7 @@ export function VoiceOrderButton({
                 onClick={onToggle}
                 className={`relative gap-2 transition-all duration-300 ${
                     isListening
-                        ? "bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white border-0 shadow-lg shadow-red-500/25"
+                        ? "bg-violet-600 hover:bg-violet-700 text-white border-0 shadow-lg shadow-red-500/25"
                         : "hover:border-violet-500/50 hover:bg-violet-50 dark:hover:bg-violet-950/30"
                 }`}
             >

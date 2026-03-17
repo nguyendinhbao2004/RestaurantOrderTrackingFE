@@ -38,7 +38,7 @@ export default function RevenuePage() {
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold">
-                    <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                    <span className="text-violet-600">
                         Revenue Analytics
                     </span>
                 </h1>
@@ -122,7 +122,7 @@ export default function RevenuePage() {
                                             </div>
                                             <div className="h-3 bg-muted rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-gradient-to-r from-violet-500 to-purple-500 rounded-full transition-all duration-500"
+                                                    className="h-full bg-violet-500 rounded-full transition-all duration-500"
                                                     style={{ width: `${percentage}%` }}
                                                 />
                                             </div>

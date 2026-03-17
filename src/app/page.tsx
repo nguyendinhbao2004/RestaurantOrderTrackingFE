@@ -129,10 +129,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:shadow-violet-500/50 transition-shadow">
+            <div className="w-10 h-10 rounded-xl bg-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/30 group-hover:shadow-violet-500/50 transition-shadow">
               <span className="text-white font-bold text-lg">R</span>
             </div>
-            <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+            <span className="font-bold text-xl tracking-tight text-violet-600">
               Restaurant
             </span>
           </Link>
@@ -170,7 +170,7 @@ export default function Home() {
             <Button
               asChild
               size="sm"
-              className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full px-6 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-shadow"
+              className="bg-violet-600 hover:bg-violet-700 text-white rounded-full px-6 shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-shadow"
             >
               <Link href="/menu">Order Now</Link>
             </Button>
@@ -201,7 +201,7 @@ export default function Home() {
 
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold leading-[1.08] tracking-tight mb-6">
                 Experience{" "}
-                <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+                <span className="text-violet-600">
                   Culinary
                 </span>{" "}
                 Excellence
@@ -217,7 +217,7 @@ export default function Home() {
                 <Button
                   asChild
                   size="lg"
-                  className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full px-8 py-6 text-base shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 transition-all hover:scale-[1.03]"
+                  className="bg-violet-600 hover:bg-violet-700 text-white rounded-full px-8 py-6 text-base shadow-xl shadow-violet-500/30 hover:shadow-violet-500/50 transition-all hover:scale-[1.03]"
                 >
                   <Link href="/menu">
                     <ShoppingCart className="w-5 h-5 mr-2" />
@@ -266,7 +266,7 @@ export default function Home() {
             <div className="relative animate-slideUp animation-delay-200 hidden lg:block">
               <div className="relative w-full aspect-square max-w-lg mx-auto">
                 {/* Glow ring */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-violet-500/30 via-transparent to-fuchsia-500/30 blur-2xl animate-pulse-slow" />
+                <div className="absolute inset-0 rounded-full bg-violet-500/30 blur-2xl animate-pulse-slow" />
                 <div className="absolute inset-4 rounded-3xl overflow-hidden shadow-2xl shadow-violet-500/20 border border-white/20">
                   <img
                     src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80"
@@ -274,13 +274,13 @@ export default function Home() {
                     className="w-full h-full object-cover"
                   />
                   {/* Overlay gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-black/40" />
                 </div>
 
                 {/* Floating badge */}
                 <div className="absolute -bottom-2 -left-2 bg-white dark:bg-zinc-900 rounded-2xl px-5 py-3 shadow-xl shadow-black/10 animate-float">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-violet-500 flex items-center justify-center">
                       <Star className="w-4 h-4 text-white fill-white" />
                     </div>
                     <div>
@@ -295,7 +295,7 @@ export default function Home() {
                 {/* Floating badge 2 */}
                 <div className="absolute -top-2 -right-2 bg-white dark:bg-zinc-900 rounded-2xl px-5 py-3 shadow-xl shadow-black/10 animate-float animation-delay-400">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-violet-500 flex items-center justify-center">
                       <Clock className="w-4 h-4 text-white" />
                     </div>
                     <div>
@@ -331,7 +331,7 @@ export default function Home() {
               </span>
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
                 Crafted with{" "}
-                <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                <span className="text-violet-600">
                   Passion
                 </span>
               </h2>
@@ -355,11 +355,11 @@ export default function Home() {
                       alt={dish.name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                    <div className="absolute inset-0 bg-black/60" />
 
                     {/* Tag */}
                     <div className="absolute top-4 left-4">
-                      <span className="bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg">
+                      <span className="bg-violet-600 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg">
                         {dish.tag}
                       </span>
                     </div>
@@ -422,7 +422,7 @@ export default function Home() {
         {/* ─── How It Works ─── */}
         <section
           id="how-it-works"
-          className="py-24 lg:py-32 bg-gradient-to-b from-violet-50/60 to-background dark:from-violet-950/20 dark:to-background"
+          className="py-24 lg:py-32 bg-violet-50/60 dark:bg-violet-950/20"
         >
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-16 animate-slideUp">
@@ -432,7 +432,7 @@ export default function Home() {
               </span>
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
                 How It{" "}
-                <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                <span className="text-violet-600">
                   Works
                 </span>
               </h2>
@@ -444,7 +444,7 @@ export default function Home() {
 
             <div className="grid md:grid-cols-3 gap-8 relative">
               {/* Connecting line (desktop) */}
-              <div className="hidden md:block absolute top-24 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-violet-300 via-purple-300 to-fuchsia-300 dark:from-violet-800 dark:via-purple-800 dark:to-fuchsia-800" />
+              <div className="hidden md:block absolute top-24 left-[20%] right-[20%] h-0.5 bg-violet-300 dark:bg-violet-800" />
 
               {steps.map((step, i) => (
                 <div
@@ -454,7 +454,7 @@ export default function Home() {
                 >
                   {/* Number badge */}
                   <div className="relative z-10 mb-6">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center shadow-xl shadow-violet-500/30 transition-transform hover:scale-110 hover:rotate-3">
+                    <div className="w-20 h-20 rounded-2xl bg-violet-500 flex items-center justify-center shadow-xl shadow-violet-500/30 transition-transform hover:scale-110 hover:rotate-3">
                       <step.icon className="w-9 h-9 text-white" />
                     </div>
                     <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-900 border-2 border-violet-500 flex items-center justify-center text-xs font-bold text-violet-600">
@@ -482,7 +482,7 @@ export default function Home() {
               </span>
               <h2 className="text-4xl md:text-5xl font-bold mb-4">
                 What Our Guests{" "}
-                <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                <span className="text-violet-600">
                   Say
                 </span>
               </h2>
@@ -515,7 +515,7 @@ export default function Home() {
                   </p>
 
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-violet-500 flex items-center justify-center text-white font-bold text-sm">
                       {t.avatar}
                     </div>
                     <div>
@@ -534,7 +534,7 @@ export default function Home() {
         {/* ─── CTA Banner ─── */}
         <section className="py-24 lg:py-32">
           <div className="max-w-5xl mx-auto px-6">
-            <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 px-8 py-16 md:px-16 md:py-20 text-center text-white shadow-2xl shadow-violet-500/30">
+            <div className="relative overflow-hidden rounded-[2rem] bg-violet-600 px-8 py-16 md:px-16 md:py-20 text-center text-white shadow-2xl shadow-violet-500/30">
               {/* Decorative circles */}
               <div className="absolute top-[-80px] right-[-80px] w-60 h-60 bg-white/10 rounded-full blur-2xl" />
               <div className="absolute bottom-[-60px] left-[-60px] w-40 h-40 bg-white/10 rounded-full blur-2xl" />
@@ -568,10 +568,10 @@ export default function Home() {
               {/* Brand */}
               <div className="md:col-span-1">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
+                  <div className="w-10 h-10 rounded-xl bg-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
                     <span className="text-white font-bold text-lg">R</span>
                   </div>
-                  <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
+                  <span className="font-bold text-xl tracking-tight text-violet-600">
                     Restaurant
                   </span>
                 </div>

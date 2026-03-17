@@ -370,7 +370,7 @@ export default function CustomerPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-50/50 to-background dark:from-violet-950/20 dark:to-background">
+    <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
       {/* ─── Header ─── */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/60 backdrop-blur-xl shadow-sm border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
@@ -380,10 +380,10 @@ export default function CustomerPage() {
               href="/customer"
               className="flex items-center gap-2.5 shrink-0"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
+              <div className="w-9 h-9 rounded-xl bg-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
                 <span className="text-white font-bold text-base">R</span>
               </div>
-              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent hidden sm:inline">
+              <span className="font-bold text-lg tracking-tight text-violet-600 hidden sm:inline">
                 Restaurant
               </span>
             </Link>
@@ -410,7 +410,7 @@ export default function CustomerPage() {
                 <ShoppingCart className="w-4 h-4 mr-1.5" />
                 <span className="hidden sm:inline">Giỏ hàng</span>
                 {getCartItemCount() > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs flex items-center justify-center font-bold">
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-violet-600 text-white text-xs flex items-center justify-center font-bold">
                     {getCartItemCount()}
                   </span>
                 )}
@@ -452,7 +452,7 @@ export default function CustomerPage() {
                       {avatarPreview ? (
                         <AvatarImage src={avatarPreview} alt={user?.name} />
                       ) : null}
-                      <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-xs font-bold">
+                      <AvatarFallback className="bg-violet-500 text-white text-xs font-bold">
                         {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -485,7 +485,7 @@ export default function CustomerPage() {
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+            <span className="text-violet-600">
               Đặt hàng trực tuyến
             </span>
           </h1>
@@ -539,7 +539,7 @@ export default function CustomerPage() {
                   <TabsTrigger
                     key={cat.value}
                     value={cat.value}
-                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-600 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-full px-5 py-2"
+                    className="data-[state=active]:bg-violet-600 data-[state=active]:text-white rounded-full px-5 py-2"
                   >
                     {cat.label}
                   </TabsTrigger>
@@ -593,7 +593,7 @@ export default function CustomerPage() {
                       onClick={() => setPageIndex(page)}
                       className={`h-9 w-9 p-0 rounded-full ${
                         page === pageIndex
-                          ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white border-0"
+                          ? "bg-violet-600 text-white border-0"
                           : ""
                       }`}
                     >
@@ -623,7 +623,7 @@ export default function CustomerPage() {
       {getCartItemCount() > 0 && (
         <button
           onClick={() => setShowCart(true)}
-          className="fixed bottom-6 right-6 z-40 lg:hidden bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-full px-6 py-3.5 shadow-2xl shadow-violet-500/40 flex items-center gap-2 hover:scale-105 transition-transform"
+          className="fixed bottom-6 right-6 z-40 lg:hidden bg-violet-600 text-white rounded-full px-6 py-3.5 shadow-2xl shadow-violet-500/40 flex items-center gap-2 hover:scale-105 transition-transform"
         >
           <ShoppingCart className="w-5 h-5" />
           <span className="font-semibold">{getCartItemCount()} món</span>
@@ -754,7 +754,7 @@ export default function CustomerPage() {
                 <Button
                   onClick={handleStartCheckout}
                   disabled={isLoadingCheckout}
-                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full py-5 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-full py-5 text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoadingCheckout ? (
                     <>
@@ -803,7 +803,7 @@ export default function CustomerPage() {
                             <div
                               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
                                 isActive
-                                  ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white"
+                                  ? "bg-violet-600 text-white"
                                   : isDone
                                   ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
                                   : "bg-muted text-muted-foreground"
@@ -1107,7 +1107,7 @@ export default function CustomerPage() {
                       <div
                         className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                           paymentMethod === opt.value
-                            ? "bg-gradient-to-br from-violet-500 to-purple-600 text-white"
+                            ? "bg-violet-500 text-white"
                             : "bg-muted text-muted-foreground"
                         }`}
                       >
@@ -1138,7 +1138,7 @@ export default function CustomerPage() {
               {/* Success */}
               {checkoutStep === "success" && (
                 <div className="text-center py-8">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/30">
+                  <div className="w-20 h-20 rounded-full bg-violet-500 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/30">
                     <CheckCircle2 className="w-10 h-10 text-white" />
                   </div>
                   <h2 className="text-2xl font-bold mb-2">
@@ -1173,7 +1173,7 @@ export default function CustomerPage() {
 
                   <Button
                     onClick={() => handleCloseCheckout(false)}
-                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full px-8"
+                    className="bg-violet-600 hover:bg-violet-700 text-white rounded-full px-8"
                   >
                     Tiếp tục mua sắm
                   </Button>
@@ -1211,7 +1211,7 @@ export default function CustomerPage() {
                 )}
 
                 <Button
-                  className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full"
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-full"
                   disabled={
                     (checkoutStep === "delivery" && !isDeliveryValid) ||
                     isSubmittingOrder ||
@@ -1288,7 +1288,7 @@ export default function CustomerPage() {
                       )
                     }
                   >
-                    <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${!notif.read ? "bg-gradient-to-br from-violet-500 to-purple-600" : "bg-muted"}`}>
+                    <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${!notif.read ? "bg-violet-500" : "bg-muted"}`}>
                       <Bell className={`w-3.5 h-3.5 ${!notif.read ? "text-white" : "text-muted-foreground"}`} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1349,14 +1349,14 @@ export default function CustomerPage() {
                     {avatarPreview ? (
                       <AvatarImage src={avatarPreview} alt="Avatar" />
                     ) : null}
-                    <AvatarFallback className="bg-gradient-to-br from-violet-500 to-purple-600 text-white text-2xl font-bold">
+                    <AvatarFallback className="bg-violet-500 text-white text-2xl font-bold">
                       {profileForm.name?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <button
                     type="button"
                     onClick={() => avatarInputRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-violet-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
                   >
                     <Camera className="w-3.5 h-3.5" />
                   </button>
@@ -1508,7 +1508,7 @@ export default function CustomerPage() {
               Hủy
             </Button>
             <Button
-              className="flex-1 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full"
+              className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-full"
               disabled={
                 !!(profileForm.confirmPassword && profileForm.newPassword !== profileForm.confirmPassword)
               }
@@ -1588,7 +1588,7 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
             onClick={onAdd}
             disabled={!item.isAvailable}
             size="sm"
-            className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-full px-4 disabled:from-gray-400 disabled:to-gray-500"
+            className="bg-violet-600 hover:bg-violet-700 text-white rounded-full px-4 disabled:bg-gray-400"
           >
             <Plus className="w-4 h-4 mr-1" />
             Thêm
