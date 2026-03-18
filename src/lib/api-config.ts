@@ -5,7 +5,7 @@
 
 // Base URL — reads from env, falls back to default
 export const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5015";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "https://localhost:7260";
 
 // ==================== AUTH ====================
 export const API_ENDPOINTS = {
@@ -39,13 +39,19 @@ export const API_ENDPOINTS = {
         list: `${API_BASE_URL}/api/Order`,
         detail: (id: string) => `${API_BASE_URL}/api/Order/${id}`,
         create: `${API_BASE_URL}/api/Order`,
+        createItem: `${API_BASE_URL}/api/OrderItem`,
         onlineCreate: `${API_BASE_URL}/api/Order/online`,
-        updateStatus: (id: string) => `${API_BASE_URL}/api/Order/${id}/status`,
+        updateStatus: `${API_BASE_URL}/api/Order/Update-Status`,
     },
 
     // ==================== PAYMENTS ====================
     payments: {
         createLink: `${API_BASE_URL}/api/Payment/create-link`,
+    },
+
+    // ==================== CASHIER ====================
+    cashier: {
+        createBill: `${API_BASE_URL}/api/Cashier/bill`,
     },
 
     // ==================== TABLES ====================
@@ -72,7 +78,7 @@ export const API_ENDPOINTS = {
 
     // ==================== ACCOUNTS ====================
     accounts: {
-        list: `https://localhost:7260/api/Account`,
+        list: `${API_BASE_URL}/api/Account`,
     },
 
     // ==================== BANKS ====================
