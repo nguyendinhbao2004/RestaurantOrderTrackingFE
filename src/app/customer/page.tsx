@@ -36,6 +36,7 @@ import { mapProductsToMenuItems } from "@/lib/helpers";
 import { Category } from "@/types";
 import { formatCurrency } from "@/lib/helpers";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {usePaymentSuccessSignalR, type PaymentMessage,} from "@/hooks/usePaymentSuccessSignalR";
 
 /* ──────────── types ──────────── */
 
@@ -44,6 +45,14 @@ interface DeliveryInfo {
   phone: string;
   address: string;
   notes: string;
+}
+
+interface NotificationItem {
+  id: string;
+  title: string;
+  desc: string;
+  time: string;
+  read: boolean;
 }
 
 type PaymentMethod = "cod" | "bank" | "ewallet";
@@ -88,7 +97,7 @@ export default function CustomerPage() {
 
   // Notifications
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   // Profile
   const [showProfile, setShowProfile] = useState(false);
@@ -125,6 +134,7 @@ export default function CustomerPage() {
     useState<PaymentLinkData | null>(null);
   const [billId, setBillId] = useState<string>("");
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
+  const [isAwaitingPaymentConfirmation, setIsAwaitingPaymentConfirmation] = useState(false);
 
   const {
     cart,
@@ -213,6 +223,7 @@ export default function CustomerPage() {
     setPaymentLinkData(null);
     setBillId("");
     setCopiedField(null);
+    setIsAwaitingPaymentConfirmation(false);
     setIsSubmittingOrder(false);
     setIsCreatingPaymentLink(false);
   }, []);
@@ -224,6 +235,7 @@ export default function CustomerPage() {
       setPaymentLinkData(null);
       setBillId("");
       setCopiedField(null);
+      setIsAwaitingPaymentConfirmation(false);
       if (user?.id) {
         const response = await fetchCustomerByAccountId(user.id);
         if (response.succeeded && response.data) {
@@ -248,9 +260,11 @@ export default function CustomerPage() {
   const handleCreatePaymentLink = useCallback(async (currentBillId: string) => {
     setIsCreatingPaymentLink(true);
     setCheckoutError(null);
+    setIsAwaitingPaymentConfirmation(false);
 
     try {
-      const paymentResponse = await createPaymentLink({ billId: currentBillId });
+      const origin = window.location.origin;
+      const paymentResponse = await createPaymentLink({billId: currentBillId});
       setPaymentLinkData(paymentResponse.data);
     } catch (error) {
       setCheckoutError(
@@ -272,6 +286,7 @@ export default function CustomerPage() {
 
     setIsSubmittingOrder(true);
     setCheckoutError(null);
+    setIsAwaitingPaymentConfirmation(false);
 
     try {
       const response = await createOnlineOrder({
@@ -296,6 +311,7 @@ export default function CustomerPage() {
         return;
       }
 
+      setIsAwaitingPaymentConfirmation(false);
       setCheckoutStep("success");
     } catch (error) {
       setCheckoutError(
@@ -317,10 +333,6 @@ export default function CustomerPage() {
     paymentMethod,
   ]);
 
-  const handleMarkTransferCompleted = () => {
-    setCheckoutStep("success");
-  };
-
   const handleCloseCheckout = (open: boolean) => {
     setShowCheckout(open);
     if (!open) resetCheckoutState();
@@ -337,6 +349,41 @@ export default function CustomerPage() {
       setCheckoutError("Không thể sao chép. Vui lòng thử lại.");
     }
   };
+
+  const handlePaymentSuccessMessage = useCallback(
+    (message: PaymentMessage) => {
+      const incomingOrderId = message.orderId.trim();
+      if (!incomingOrderId) return;
+
+      const paidAtDate = message.paidAt ? new Date(message.paidAt) : new Date();
+      const paidAtLabel = Number.isNaN(paidAtDate.getTime())
+        ? "Vừa xong"
+        : paidAtDate.toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+      setNotifications((prev) => [
+        {
+          id: `payment-success-${incomingOrderId}-${Date.now()}`,
+          title: "Thanh toán thành công",
+          desc: `Đơn ${incomingOrderId} đã thanh toán ${formatCurrency(message.amount)}${message.paymentMethod ? ` qua ${message.paymentMethod}` : ""}.`,
+          time: paidAtLabel,
+          read: false,
+        },
+        ...prev,
+      ]);
+
+      if (incomingOrderId !== orderId) return;
+
+      setCheckoutError(null);
+      setIsAwaitingPaymentConfirmation(false);
+      setCheckoutStep("success");
+    },
+    [orderId],
+  );
+
+  usePaymentSuccessSignalR(handlePaymentSuccessMessage, isAuthenticated);
 
   const isDeliveryValid =
     deliveryInfo.name.trim() &&
@@ -842,6 +889,15 @@ export default function CustomerPage() {
                 </p>
               </div>
 
+              {isAwaitingPaymentConfirmation && (
+                <div className="mx-5 mb-3 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-3">
+                  <p className="flex items-center gap-2 text-sm font-medium text-violet-700">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Đang chờ backend xác nhận thanh toán thành công...
+                  </p>
+                </div>
+              )}
+
               {isCreatingPaymentLink ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 px-5 pb-6">
                   <Loader2 className="w-10 h-10 animate-spin text-violet-600" />
@@ -1216,13 +1272,14 @@ export default function CustomerPage() {
                     (checkoutStep === "delivery" && !isDeliveryValid) ||
                     isSubmittingOrder ||
                     isCreatingPaymentLink ||
-                    (checkoutStep === "confirm" && !paymentLinkData)
+                    (checkoutStep === "confirm" &&
+                      (!paymentLinkData || isAwaitingPaymentConfirmation))
                   }
                   onClick={() => {
                     if (checkoutStep === "delivery") setCheckoutStep("payment");
                     else if (checkoutStep === "payment")
                       void handleSubmitOnlineOrder();
-                    else handleMarkTransferCompleted();
+                    else setIsAwaitingPaymentConfirmation(true);
                   }}
                 >
                   {isSubmittingOrder ? (
@@ -1234,6 +1291,12 @@ export default function CustomerPage() {
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Đang tạo mã QR...
+                    </>
+                  ) : checkoutStep === "confirm" &&
+                    isAwaitingPaymentConfirmation ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Đang chờ xác nhận...
                     </>
                   ) : checkoutStep === "confirm" ? (
                     <>Tôi đã chuyển khoản</>

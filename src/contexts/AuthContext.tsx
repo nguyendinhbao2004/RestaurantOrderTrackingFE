@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 removeToken();
                 localStorage.removeItem(REFRESH_TOKEN_KEY);
                 localStorage.removeItem(AREA_ID_KEY);
+                localStorage.removeItem('accessToken');
             }
         }
         setIsLoading(false);
@@ -108,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         removeToken();
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem(AREA_ID_KEY);
+        localStorage.removeItem('accessToken');
         setUser(null);
         router.push('/login');
     }, [router]);

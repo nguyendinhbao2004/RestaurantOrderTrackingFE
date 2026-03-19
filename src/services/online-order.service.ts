@@ -1,4 +1,5 @@
 import { API_ENDPOINTS } from "@/lib/api-config";
+import { getToken } from "@/lib/auth";
 import { httpClient } from "@/lib/http-client";
 
 export enum ApiPaymentMethod {
@@ -50,5 +51,13 @@ export async function createOnlineOrder(payload: CreateOnlineOrderRequest) {
 }
 
 export async function createPaymentLink(payload: CreatePaymentLinkRequest) {
-  return httpClient.post<PaymentLinkData>(API_ENDPOINTS.payments.createLink, payload);
+  const token =
+    getToken() ||
+    (typeof window !== "undefined" ? localStorage.getItem("accessToken") : null);
+
+  return httpClient.post<PaymentLinkData>(
+    API_ENDPOINTS.payments.createLink,
+    payload,
+    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
+  );
 }
