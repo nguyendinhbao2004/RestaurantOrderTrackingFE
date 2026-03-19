@@ -367,7 +367,7 @@ export default function CustomerPage() {
         {
           id: `payment-success-${incomingOrderId}-${Date.now()}`,
           title: "Thanh toán thành công",
-          desc: `Đơn ${incomingOrderId} đã thanh toán ${formatCurrency(message.amount)}${message.paymentMethod ? ` qua ${message.paymentMethod}` : ""}.`,
+          desc: `Đơn ${incomingOrderId} đã thanh toán ${formatCurrency(message.amount)} thành công.`,
           time: paidAtLabel,
           read: false,
         },
