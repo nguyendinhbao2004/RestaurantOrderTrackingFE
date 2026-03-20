@@ -141,17 +141,17 @@ export default function MenuPage() {
   };
 
   return (
-    <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
+    <div className="min-h-screen bg-orange-50/50 dark:bg-orange-950/20">
       {/* ─── Header ─── */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/60 backdrop-blur-xl shadow-sm border-b border-border/50">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-stone-950/60 backdrop-blur-xl shadow-sm border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center gap-4">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5 shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
+              <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
                 <span className="text-white font-bold text-base">R</span>
               </div>
-              <span className="font-bold text-lg tracking-tight text-violet-600 hidden sm:inline">
+              <span className="font-bold text-lg tracking-tight text-orange-600 hidden sm:inline">
                 Restaurant
               </span>
             </Link>
@@ -178,7 +178,7 @@ export default function MenuPage() {
                 <ShoppingCart className="w-4 h-4 mr-1.5" />
                 <span className="hidden sm:inline">Giỏ hàng</span>
                 {getCartItemCount() > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-violet-600 text-white text-xs flex items-center justify-center font-bold">
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-orange-600 text-white text-xs flex items-center justify-center font-bold">
                     {getCartItemCount()}
                   </span>
                 )}
@@ -197,8 +197,8 @@ export default function MenuPage() {
               ) : (
                 <div className="hidden sm:flex items-center gap-2">
                   <div className="flex items-center gap-2.5 rounded-full pl-1 pr-3 py-1">
-                    <Avatar className="h-8 w-8 border-2 border-violet-200 dark:border-violet-800">
-                      <AvatarFallback className="bg-violet-500 text-white text-xs font-bold">
+                    <Avatar className="h-8 w-8 border-2 border-orange-200 dark:border-orange-800">
+                      <AvatarFallback className="bg-orange-500 text-white text-xs font-bold">
                         {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                       </AvatarFallback>
                     </Avatar>
@@ -227,7 +227,7 @@ export default function MenuPage() {
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            <span className="text-violet-600">
+            <span className="text-orange-600">
               Thực đơn
             </span>
           </h1>
@@ -244,7 +244,7 @@ export default function MenuPage() {
         {/* Loading */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-violet-600 mb-4" />
+            <Loader2 className="h-12 w-12 animate-spin text-orange-600 mb-4" />
             <p className="text-muted-foreground">Đang tải thực đơn...</p>
           </div>
         )}
@@ -286,7 +286,7 @@ export default function MenuPage() {
                   <TabsTrigger
                     key={cat.value}
                     value={cat.value}
-                    className="data-[state=active]:bg-violet-600 data-[state=active]:text-white rounded-full px-5 py-2"
+                    className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-full px-5 py-2"
                   >
                     {cat.label}
                   </TabsTrigger>
@@ -340,7 +340,7 @@ export default function MenuPage() {
                       onClick={() => setPageIndex(page)}
                       className={`h-9 w-9 p-0 rounded-full ${
                         page === pageIndex
-                          ? "bg-violet-600 text-white border-0"
+                          ? "bg-orange-600 text-white border-0"
                           : ""
                       }`}
                     >
@@ -370,7 +370,7 @@ export default function MenuPage() {
       {getCartItemCount() > 0 && (
         <button
           onClick={() => setShowCart(true)}
-          className="fixed bottom-6 right-6 z-40 lg:hidden bg-violet-600 text-white rounded-full px-6 py-3.5 shadow-2xl shadow-violet-500/40 flex items-center gap-2 hover:scale-105 transition-transform"
+          className="fixed bottom-6 right-6 z-40 lg:hidden bg-orange-600 text-white rounded-full px-6 py-3.5 shadow-2xl shadow-orange-500/40 flex items-center gap-2 hover:scale-105 transition-transform"
         >
           <ShoppingCart className="w-5 h-5" />
           <span className="font-semibold">{getCartItemCount()} món</span>
@@ -384,12 +384,12 @@ export default function MenuPage() {
         <DialogContent className="sm:max-w-md p-0 gap-0 max-h-[90vh] flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-violet-600" />
+              <ShoppingCart className="w-5 h-5 text-orange-600" />
               Giỏ hàng
               {getCartItemCount() > 0 && (
                 <Badge
                   variant="secondary"
-                  className="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+                  className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
                 >
                   {getCartItemCount()} món
                 </Badge>
@@ -441,7 +441,7 @@ export default function MenuPage() {
                         <h4 className="font-medium text-sm truncate">
                           {item.menuItem.name}
                         </h4>
-                        <p className="text-sm text-violet-600 font-semibold">
+                        <p className="text-sm text-orange-600 font-semibold">
                           {formatCurrency(item.menuItem.price)}
                         </p>
                       </div>
@@ -494,7 +494,7 @@ export default function MenuPage() {
               <div className="px-6 py-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">Tổng cộng</span>
-                  <span className="text-xl font-bold text-violet-600">
+                  <span className="text-xl font-bold text-orange-600">
                     {formatCurrency(getCartTotal())}
                   </span>
                 </div>
@@ -508,7 +508,7 @@ export default function MenuPage() {
 
                 <Button
                   onClick={handleCheckoutClick}
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-full py-5 text-base"
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-full py-5 text-base"
                 >
                   {isAuthenticated ? (
                     <>
@@ -536,7 +536,7 @@ export default function MenuPage() {
 
 function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
   return (
-    <Card className="group overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm hover:border-violet-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 flex flex-col">
+    <Card className="group overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm hover:border-orange-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/5 hover:-translate-y-1 flex flex-col">
       <div className="relative aspect-[4/3] overflow-hidden flex-shrink-0">
         <Image
           src={item.image}
@@ -558,14 +558,14 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 
         {/* Category badge */}
         <div className="absolute top-3 left-3">
-          <Badge className="bg-white/90 dark:bg-black/70 text-foreground backdrop-blur-sm text-xs">
+          <Badge className="bg-white/90 dark:bg-stone-950/70 text-foreground backdrop-blur-sm text-xs">
             {item.categoryName}
           </Badge>
         </div>
 
         {/* Prep time */}
         <div className="absolute top-3 right-3">
-          <Badge className="bg-violet-600 hover:bg-violet-700 text-white text-xs">
+          <Badge className="bg-orange-600 hover:bg-orange-700 text-white text-xs">
             <Clock className="w-3 h-3 mr-1" />
             {item.preparationTime} phút
           </Badge>
@@ -574,7 +574,7 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 
       <CardContent className="p-4 flex flex-col flex-1">
         <div className="flex justify-between items-start mb-1.5">
-          <h3 className="font-semibold text-base leading-tight flex-1 pr-2 group-hover:text-violet-600 transition-colors">
+          <h3 className="font-semibold text-base leading-tight flex-1 pr-2 group-hover:text-orange-600 transition-colors">
             {item.name}
           </h3>
         </div>
@@ -583,7 +583,7 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
         </p>
 
         <div className="flex items-center justify-between mt-auto">
-          <span className="text-lg font-bold text-violet-600 dark:text-violet-400">
+          <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
             {formatCurrency(item.price)}
           </span>
 
@@ -591,7 +591,7 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
             onClick={onAdd}
             disabled={!item.isAvailable}
             size="sm"
-            className="bg-violet-600 hover:bg-violet-700 text-white rounded-full px-4 disabled:bg-gray-400"
+            className="bg-orange-600 hover:bg-orange-700 text-white rounded-full px-4 disabled:bg-stone-400"
           >
             <Plus className="w-4 h-4 mr-1" />
             Thêm

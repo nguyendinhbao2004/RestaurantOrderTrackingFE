@@ -6,7 +6,7 @@ export function CTASection() {
     return (
         <section className="py-24 relative overflow-hidden">
             {/* Background elements */}
-            <div className="absolute inset-0 bg-violet-600" />
+            <div className="absolute inset-0 bg-orange-600" />
             <div className="absolute inset-0 bg-white/5" />
 
             {/* Floating orbs */}
@@ -26,7 +26,7 @@ export function CTASection() {
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button
                         size="lg"
-                        className="bg-white text-violet-600 hover:bg-white/90 text-lg px-8 h-12 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+                        className="bg-white text-orange-600 hover:bg-white/90 text-lg px-8 h-12 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
                     >
                         Start Free Trial
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -15,7 +15,7 @@ const features = [
         ),
         title: "AI-Powered Development",
         description: "Leverage cutting-edge AI to accelerate your development workflow and generate production-ready code instantly.",
-        gradient: "from-violet-500 to-purple-500",
+        gradient: "from-orange-500 to-orange-500",
     },
     {
         icon: (
@@ -25,7 +25,7 @@ const features = [
         ),
         title: "Lightning Fast",
         description: "Built on the latest technologies for optimal performance. Experience sub-second response times and smooth interactions.",
-        gradient: "from-purple-500 to-fuchsia-500",
+        gradient: "from-orange-500 to-amber-500",
     },
     {
         icon: (
@@ -36,7 +36,7 @@ const features = [
         ),
         title: "Fully Customizable",
         description: "Every component is designed to be easily customized. Match your brand identity with minimal effort.",
-        gradient: "from-fuchsia-500 to-pink-500",
+        gradient: "from-amber-500 to-orange-500",
     },
     {
         icon: (
@@ -47,7 +47,7 @@ const features = [
         ),
         title: "Enterprise Security",
         description: "Bank-grade security with end-to-end encryption, SSO support, and comprehensive audit logs.",
-        gradient: "from-pink-500 to-rose-500",
+        gradient: "from-orange-500 to-rose-500",
     },
     {
         icon: (
@@ -80,12 +80,12 @@ export function FeaturesSection() {
             <div className="max-w-7xl mx-auto px-6">
                 {/* Section header */}
                 <div className="text-center mb-16">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 mb-4">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 border border-orange-500/20 mb-4">
                         <span className="text-sm font-medium text-muted-foreground">Features</span>
                     </div>
                     <h2 className="text-3xl md:text-5xl font-bold mb-4">
                         Everything you need to{" "}
-                        <span className="text-violet-600">
+                        <span className="text-orange-600">
                             succeed
                         </span>
                     </h2>
@@ -100,11 +100,11 @@ export function FeaturesSection() {
                     {features.map((feature, index) => (
                         <Card
                             key={index}
-                            className="group relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm hover:border-violet-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/5"
+                            className="group relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm hover:border-orange-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/5"
                         >
-                            <div className="absolute inset-0 bg-violet-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <div className="absolute inset-0 bg-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                             <CardHeader className="relative">
-                                <div className="w-12 h-12 rounded-xl bg-violet-500 flex items-center justify-center text-white mb-4 shadow-lg">
+                                <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center text-white mb-4 shadow-lg">
                                     {feature.icon}
                                 </div>
                                 <CardTitle className="text-xl">{feature.title}</CardTitle>

@@ -30,8 +30,8 @@ export default function LoginPage() {
     // Show loading while checking auth state
     if (authLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-violet-50/50 dark:bg-violet-950/20">
-                <div className="animate-spin h-8 w-8 border-4 border-violet-600 border-t-transparent rounded-full"></div>
+            <div className="min-h-screen flex items-center justify-center bg-orange-50/50 dark:bg-orange-950/20">
+                <div className="animate-spin h-8 w-8 border-4 border-orange-600 border-t-transparent rounded-full"></div>
             </div>
         );
     }
@@ -39,12 +39,12 @@ export default function LoginPage() {
     // Redirect if already authenticated
     if (isAuthenticated) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-violet-50/50 dark:bg-violet-950/20">
-                <div className="animate-spin h-8 w-8 border-4 border-violet-600 border-t-transparent rounded-full mb-4"></div>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-orange-50/50 dark:bg-orange-950/20">
+                <div className="animate-spin h-8 w-8 border-4 border-orange-600 border-t-transparent rounded-full mb-4"></div>
                 <p className="text-muted-foreground mb-4">Redirecting...</p>
                 <button 
                     onClick={logout}
-                    className="text-sm text-violet-600 hover:underline"
+                    className="text-sm text-orange-600 hover:underline"
                 >
                     Sign out instead
                 </button>
@@ -112,21 +112,21 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
+        <div className="min-h-screen bg-orange-50/50 dark:bg-orange-950/20">
             {/* Top bar */}
-            <div className="w-full px-6 py-4 flex items-center justify-between border-b border-border/40 bg-white/60 dark:bg-black/20 backdrop-blur-sm">
+            <div className="w-full px-6 py-4 flex items-center justify-between border-b border-border/40 bg-white/60 dark:bg-stone-950/20 backdrop-blur-sm">
                 <Link href="/" className="flex items-center gap-2.5 group">
-                    <div className="w-8 h-8 rounded-lg bg-violet-500 flex items-center justify-center shadow-md shadow-violet-500/30 group-hover:scale-105 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center shadow-md shadow-orange-500/30 group-hover:scale-105 transition-transform">
                         <span className="text-white font-bold text-sm">R</span>
                     </div>
-                    <span className="font-bold text-base tracking-tight text-violet-600">
+                    <span className="font-bold text-base tracking-tight text-orange-600">
                         Restaurant
                     </span>
                 </Link>
 
                 <Link
                     href="/"
-                    className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-violet-600 transition-colors group"
+                    className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-orange-600 transition-colors group"
                 >
                     <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
                     Quay về trang chủ
@@ -138,7 +138,7 @@ export default function LoginPage() {
                 {/* Logo */}
                 <div className="text-center">
                     <h1 className="text-2xl font-bold">
-                        <span className="text-violet-600">
+                        <span className="text-orange-600">
                             Đăng nhập
                         </span>
                     </h1>
@@ -148,10 +148,10 @@ export default function LoginPage() {
                 </div>
 
                 {/* Auth Card */}
-                <Card className="border-border/50 shadow-xl shadow-violet-500/5">
+                <Card className="border-border/50 shadow-xl shadow-orange-500/5">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                           {isLoginMode ? <LogIn className="w-5 h-5 text-violet-600"/> : <UserPlus className="w-5 h-5 text-violet-600" />}
+                           {isLoginMode ? <LogIn className="w-5 h-5 text-orange-600"/> : <UserPlus className="w-5 h-5 text-orange-600" />}
                            {isLoginMode ? 'Sign In' : 'Create Customer Account'}
                         </CardTitle>
                         <CardDescription>
@@ -253,7 +253,7 @@ export default function LoginPage() {
                             <Button
                                 type="submit"
                                 disabled={isLoading}
-                                className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl py-5"
+                                className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl py-5"
                             >
                                 {isLoading ? (
                                     <svg
@@ -293,7 +293,7 @@ export default function LoginPage() {
                                 setError("");
                                 setSuccessMessage("");
                             }}
-                            className="text-sm font-semibold text-violet-600 hover:text-violet-700 hover:underline"
+                            className="text-sm font-semibold text-orange-600 hover:text-orange-700 hover:underline"
                         >
                             {isLoginMode ? "Register as Customer" : "Sign In"}
                         </button>

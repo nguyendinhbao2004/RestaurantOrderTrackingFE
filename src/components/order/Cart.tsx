@@ -184,14 +184,14 @@ export function Cart({ onPlaceOrder }: CartProps) {
       <CardContent className="pt-4 space-y-4">
         <div className="flex justify-between items-center">
           <span className="font-semibold">Total</span>
-          <span className="text-xl font-bold text-violet-600 dark:text-violet-400">
+          <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
             {formatCurrency(getCartTotal())}
           </span>
         </div>
         {selectedTable ? (
           <Button
             onClick={onPlaceOrder}
-            className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white"
           >
             Place Order
           </Button>

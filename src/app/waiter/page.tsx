@@ -64,7 +64,7 @@ export default function WaiterPage() {
       case "Available":
         return { card: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800", dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400" };
       case "Occupied":
-        return { card: "bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800", dot: "bg-blue-500", text: "text-blue-700 dark:text-blue-400" };
+        return { card: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800", dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-400" };
       default:
         return { card: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800", dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-400" };
     }
@@ -73,26 +73,26 @@ export default function WaiterPage() {
   const areaName = tables[0]?.areaName ?? "Khu vực của bạn";
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
+      <header className="bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-violet-500 flex items-center justify-center text-white font-bold text-xl select-none shrink-0">
+            <div className="w-11 h-11 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-xl select-none shrink-0">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="font-semibold text-base text-gray-900 dark:text-gray-100 leading-tight">
+              <p className="font-semibold text-base text-stone-900 dark:text-stone-100 leading-tight">
                 {user?.name}
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+              <p className="text-sm text-stone-500 dark:text-stone-400 flex items-center gap-1 mt-0.5">
                 <Users size={12} />
                 {areaName}
               </p>
             </div>
           </div>
 
-          <h1 className="hidden md:block text-xl font-bold text-violet-600">
+          <h1 className="hidden md:block text-xl font-bold text-orange-600">
             Bảng điều khiển nhân viên
           </h1>
 
@@ -106,7 +106,7 @@ export default function WaiterPage() {
                 <span>Xem bàn</span>
               </Link>
             </Button>
-            <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5 text-gray-500 hover:text-red-600 px-3 h-9">
+            <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5 text-stone-500 hover:text-red-600 px-3 h-9">
               <LogOut size={15} />
               <span>Đăng xuất</span>
             </Button>
@@ -119,9 +119,9 @@ export default function WaiterPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { icon: <CheckCircle2 size={22} />, value: readyOrders.length, label: "Sẵn sàng phục vụ", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" },
-            { icon: <ClipboardList size={22} />, value: activeOrders.length, label: "Đơn đang hoạt động", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10" },
+            { icon: <ClipboardList size={22} />, value: activeOrders.length, label: "Đơn đang hoạt động", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
             { icon: <UtensilsCrossed size={22} />, value: occupiedCount, label: "Bàn đang có khách", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
-            { icon: <TableProperties size={22} />, value: availableCount, label: "Bàn trống", color: "text-violet-600 dark:text-violet-400", bg: "bg-violet-500/10" },
+            { icon: <TableProperties size={22} />, value: availableCount, label: "Bàn trống", color: "text-orange-600 dark:text-orange-400", bg: "bg-orange-500/10" },
           ].map(({ icon, value, label, color, bg }) => (
             <Card key={label} className="border-0 shadow-sm">
               <CardContent className="p-5 flex items-center gap-4">
@@ -139,7 +139,7 @@ export default function WaiterPage() {
           {/* Ready to Serve */}
           <div className="lg:col-span-2 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+              <h2 className="text-base font-bold text-stone-800 dark:text-stone-100 flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                 Sẵn sàng phục vụ
               </h2>
@@ -149,7 +149,7 @@ export default function WaiterPage() {
             </div>
 
             {readyOrders.length === 0 ? (
-              <Card className="border-dashed border-gray-200 dark:border-gray-800 shadow-none">
+              <Card className="border-dashed border-stone-200 dark:border-stone-800 shadow-none">
                 <CardContent className="py-12 flex flex-col items-center gap-3 text-muted-foreground">
                   <CheckCircle2 size={36} className="opacity-25" />
                   <p className="text-sm">Không có đơn nào sẵn sàng phục vụ</p>
@@ -162,7 +162,7 @@ export default function WaiterPage() {
                     <div className="h-1 bg-emerald-500" />
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-base text-gray-900 dark:text-gray-100">
+                        <span className="font-semibold text-base text-stone-900 dark:text-stone-100">
                           Bàn {order.tableId}
                         </span>
                         <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300 border-0 text-xs">
@@ -172,7 +172,7 @@ export default function WaiterPage() {
                       <p className="text-sm text-muted-foreground mb-3">
                         Đơn số #{order.id.slice(0, 8)}
                       </p>
-                      <ul className="space-y-1 mb-4 text-sm text-gray-700 dark:text-gray-300">
+                      <ul className="space-y-1 mb-4 text-sm text-stone-700 dark:text-stone-300">
                         {order.items.map((item, idx) => (
                           <li key={idx} className="flex items-center gap-1.5">
                             <ChevronRight size={13} className="text-muted-foreground shrink-0" />
@@ -197,8 +197,8 @@ export default function WaiterPage() {
           {/* Table Overview */}
           <div className="lg:col-span-3 space-y-3">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                <TableProperties size={17} className="text-blue-500 shrink-0" />
+              <h2 className="text-base font-bold text-stone-800 dark:text-stone-100 flex items-center gap-2">
+                <TableProperties size={17} className="text-amber-500 shrink-0" />
                 Tổng quan bàn ăn
                 {tables[0]?.areaName && (
                   <span className="text-sm font-normal text-muted-foreground">— {tables[0].areaName}</span>
@@ -206,7 +206,7 @@ export default function WaiterPage() {
               </h2>
               <div className="flex items-center gap-3 text-sm text-muted-foreground ml-auto">
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />Trống</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />Có khách</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />Có khách</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />Khác</span>
               </div>
             </div>
@@ -232,7 +232,7 @@ export default function WaiterPage() {
                       key={table.tableNumber}
                       className={`rounded-xl border p-4 flex flex-col items-center gap-2 transition-all hover:shadow-md cursor-default ${s.card}`}
                     >
-                      <div className="text-base font-bold text-gray-800 dark:text-gray-100">
+                      <div className="text-base font-bold text-stone-800 dark:text-stone-100">
                         {table.tableNumber}
                       </div>
                       <div className="flex items-center gap-1.5">

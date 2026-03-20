@@ -46,6 +46,16 @@ export interface PaymentLinkData {
   qrCode: string;
 }
 
+export function buildVietQrImageUrl(paymentLink: Pick<PaymentLinkData, "bin" | "accountNumber" | "description" | "amount">) {
+  const imagePath = `${paymentLink.bin}-${paymentLink.accountNumber}-vietqr_pro.jpg`;
+  const query = new URLSearchParams({
+    addInfo: paymentLink.description,
+    amount: String(paymentLink.amount),
+  });
+
+  return `https://img.vietqr.io/image/${imagePath}?${query.toString()}`;
+}
+
 export async function createOnlineOrder(payload: CreateOnlineOrderRequest) {
   return httpClient.post<OnlineOrderData>(API_ENDPOINTS.orders.onlineCreate, payload);
 }

@@ -30,7 +30,7 @@ export default function ChefPage() {
     };
 
     return (
-        <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
+        <div className="min-h-screen bg-orange-50/50 dark:bg-orange-950/20">
             {/* Header */}
             <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
                 <div className="max-w-7xl mx-auto px-6 py-4">
@@ -46,7 +46,7 @@ export default function ChefPage() {
                             </Button>
                             <div>
                                 <h1 className="text-2xl font-bold">
-                                    <span className="text-violet-600">
+                                    <span className="text-orange-600">
                                         Kitchen Dashboard
                                     </span>
                                 </h1>
@@ -78,9 +78,9 @@ export default function ChefPage() {
                             <div className="text-sm text-muted-foreground">Pending</div>
                         </CardContent>
                     </Card>
-                    <Card className="bg-blue-500/10 border-blue-500/20">
+                    <Card className="bg-amber-500/10 border-amber-500/20">
                         <CardContent className="p-4 text-center">
-                            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                            <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
                                 {cookingOrders.length}
                             </div>
                             <div className="text-sm text-muted-foreground">Cooking</div>
@@ -94,9 +94,9 @@ export default function ChefPage() {
                             <div className="text-sm text-muted-foreground">Ready</div>
                         </CardContent>
                     </Card>
-                    <Card className="bg-violet-500/10 border-violet-500/20">
+                    <Card className="bg-orange-500/10 border-orange-500/20">
                         <CardContent className="p-4 text-center">
-                            <div className="text-3xl font-bold text-violet-600 dark:text-violet-400">
+                            <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
                                 {orders.filter((o) => o.status === "served").length}
                             </div>
                             <div className="text-sm text-muted-foreground">Served Today</div>
@@ -121,7 +121,7 @@ export default function ChefPage() {
                 ) : (
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {activeOrders.map((order) => (
-                            <Card key={order.id} className={`${order.status === "pending" ? "border-amber-500/50 bg-amber-500/5" : "border-blue-500/50 bg-blue-500/5"}`}>
+                            <Card key={order.id} className={`${order.status === "pending" ? "border-amber-500/50 bg-amber-500/5" : "border-amber-500/50 bg-amber-500/5"}`}>
                                 <CardHeader className="pb-3">
                                     <div className="flex items-center justify-between">
                                         <CardTitle className="text-lg">Order #{order.id}</CardTitle>
@@ -151,7 +151,7 @@ export default function ChefPage() {
                                     <Button
                                         onClick={() => handleStatusUpdate(order.id, order.status)}
                                         className={`w-full ${order.status === "pending"
-                                            ? "bg-blue-600 hover:bg-blue-700"
+                                            ? "bg-amber-600 hover:bg-amber-700"
                                             : "bg-emerald-600 hover:bg-emerald-700"
                                             } text-white`}
                                     >

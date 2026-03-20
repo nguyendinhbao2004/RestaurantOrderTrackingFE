@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'cdn.vietqr.io',
       },
+      {
+        protocol: 'https',
+        hostname: 'img.vietqr.io',
+      },
     ],
   },
 };

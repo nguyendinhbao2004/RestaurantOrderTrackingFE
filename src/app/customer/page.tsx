@@ -18,7 +18,6 @@ import {
   CheckCircle2, ShoppingBag, LogIn, LogOut, ArrowRight, FileText, Clock,
   Star, Bell, Camera, Eye, EyeOff, Lock, Settings, Copy, Check
 } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
 import { MenuItem } from "@/types";
 import { useOrder } from "@/contexts/OrderContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +27,7 @@ import { fetchCategories } from "@/services/category.service";
 import { fetchCustomerByAccountId } from "@/services/customer.service";
 import {
   ApiPaymentMethod,
+  buildVietQrImageUrl,
   PaymentLinkData,
   createOnlineOrder,
   createPaymentLink,
@@ -153,6 +153,11 @@ export default function CustomerPage() {
     if (!paymentLinkData?.bin) return undefined;
     return findBankByBin(paymentLinkData.bin);
   }, [findBankByBin, paymentLinkData]);
+
+  const paymentQrImageUrl = useMemo(() => {
+    if (!paymentLinkData) return null;
+    return buildVietQrImageUrl(paymentLinkData);
+  }, [paymentLinkData]);
 
   // Fetch products
   const loadProducts = useCallback(async () => {
@@ -417,9 +422,9 @@ export default function CustomerPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
+    <div className="min-h-screen bg-orange-50/50 dark:bg-orange-950/20">
       {/* ─── Header ─── */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/60 backdrop-blur-xl shadow-sm border-b border-border/50">
+      <header className="sticky top-0 z-50 bg-white/80 dark:bg-stone-950/60 backdrop-blur-xl shadow-sm border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center gap-4">
             {/* Logo */}
@@ -427,10 +432,10 @@ export default function CustomerPage() {
               href="/customer"
               className="flex items-center gap-2.5 shrink-0"
             >
-              <div className="w-9 h-9 rounded-xl bg-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/30">
+              <div className="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
                 <span className="text-white font-bold text-base">R</span>
               </div>
-              <span className="font-bold text-lg tracking-tight text-violet-600 hidden sm:inline">
+              <span className="font-bold text-lg tracking-tight text-orange-600 hidden sm:inline">
                 Restaurant
               </span>
             </Link>
@@ -457,7 +462,7 @@ export default function CustomerPage() {
                 <ShoppingCart className="w-4 h-4 mr-1.5" />
                 <span className="hidden sm:inline">Giỏ hàng</span>
                 {getCartItemCount() > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-violet-600 text-white text-xs flex items-center justify-center font-bold">
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-orange-600 text-white text-xs flex items-center justify-center font-bold">
                     {getCartItemCount()}
                   </span>
                 )}
@@ -481,7 +486,7 @@ export default function CustomerPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative rounded-full h-9 w-9 text-muted-foreground hover:text-violet-600"
+                    className="relative rounded-full h-9 w-9 text-muted-foreground hover:text-orange-600"
                     onClick={() => setShowNotifications(true)}
                   >
                     <Bell className="w-4 h-4" />
@@ -493,22 +498,22 @@ export default function CustomerPage() {
                   {/* Avatar + user info */}
                   <button
                     onClick={() => setShowProfile(true)}
-                    className="flex items-center gap-2.5 rounded-full pl-1 pr-3 py-1 hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors group"
+                    className="flex items-center gap-2.5 rounded-full pl-1 pr-3 py-1 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors group"
                   >
-                    <Avatar className="h-8 w-8 border-2 border-violet-200 dark:border-violet-800">
+                    <Avatar className="h-8 w-8 border-2 border-orange-200 dark:border-orange-800">
                       {avatarPreview ? (
                         <AvatarImage src={avatarPreview} alt={user?.name} />
                       ) : null}
-                      <AvatarFallback className="bg-violet-500 text-white text-xs font-bold">
+                      <AvatarFallback className="bg-orange-500 text-white text-xs font-bold">
                         {user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold leading-none group-hover:text-violet-600 transition-colors">
+                      <span className="text-sm font-semibold leading-none group-hover:text-orange-600 transition-colors">
                         {user?.name}
                       </span>
                     </div>
-                    <Settings className="w-3.5 h-3.5 text-muted-foreground group-hover:text-violet-500 transition-colors ml-0.5" />
+                    <Settings className="w-3.5 h-3.5 text-muted-foreground group-hover:text-orange-500 transition-colors ml-0.5" />
                   </button>
 
                   <Button
@@ -532,7 +537,7 @@ export default function CustomerPage() {
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            <span className="text-violet-600">
+            <span className="text-orange-600">
               Đặt hàng trực tuyến
             </span>
           </h1>
@@ -544,7 +549,7 @@ export default function CustomerPage() {
         {/* Loading */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-12 w-12 animate-spin text-violet-600 mb-4" />
+            <Loader2 className="h-12 w-12 animate-spin text-orange-600 mb-4" />
             <p className="text-muted-foreground">Đang tải thực đơn...</p>
           </div>
         )}
@@ -586,7 +591,7 @@ export default function CustomerPage() {
                   <TabsTrigger
                     key={cat.value}
                     value={cat.value}
-                    className="data-[state=active]:bg-violet-600 data-[state=active]:text-white rounded-full px-5 py-2"
+                    className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-full px-5 py-2"
                   >
                     {cat.label}
                   </TabsTrigger>
@@ -640,7 +645,7 @@ export default function CustomerPage() {
                       onClick={() => setPageIndex(page)}
                       className={`h-9 w-9 p-0 rounded-full ${
                         page === pageIndex
-                          ? "bg-violet-600 text-white border-0"
+                          ? "bg-orange-600 text-white border-0"
                           : ""
                       }`}
                     >
@@ -670,7 +675,7 @@ export default function CustomerPage() {
       {getCartItemCount() > 0 && (
         <button
           onClick={() => setShowCart(true)}
-          className="fixed bottom-6 right-6 z-40 lg:hidden bg-violet-600 text-white rounded-full px-6 py-3.5 shadow-2xl shadow-violet-500/40 flex items-center gap-2 hover:scale-105 transition-transform"
+          className="fixed bottom-6 right-6 z-40 lg:hidden bg-orange-600 text-white rounded-full px-6 py-3.5 shadow-2xl shadow-orange-500/40 flex items-center gap-2 hover:scale-105 transition-transform"
         >
           <ShoppingCart className="w-5 h-5" />
           <span className="font-semibold">{getCartItemCount()} món</span>
@@ -684,12 +689,12 @@ export default function CustomerPage() {
         <DialogContent className="sm:max-w-md p-0 gap-0 max-h-[90vh] flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-violet-600" />
+              <ShoppingCart className="w-5 h-5 text-orange-600" />
               Giỏ hàng
               {getCartItemCount() > 0 && (
                 <Badge
                   variant="secondary"
-                  className="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+                  className="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
                 >
                   {getCartItemCount()} món
                 </Badge>
@@ -741,7 +746,7 @@ export default function CustomerPage() {
                         <h4 className="font-medium text-sm truncate">
                           {item.menuItem.name}
                         </h4>
-                        <p className="text-sm text-violet-600 font-semibold">
+                        <p className="text-sm text-orange-600 font-semibold">
                           {formatCurrency(item.menuItem.price)}
                         </p>
                       </div>
@@ -794,14 +799,14 @@ export default function CustomerPage() {
               <div className="px-6 py-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold">Tổng cộng</span>
-                  <span className="text-xl font-bold text-violet-600">
+                  <span className="text-xl font-bold text-orange-600">
                     {formatCurrency(getCartTotal())}
                   </span>
                 </div>
                 <Button
                   onClick={handleStartCheckout}
                   disabled={isLoadingCheckout}
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-full py-5 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-full py-5 text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoadingCheckout ? (
                     <>
@@ -850,22 +855,22 @@ export default function CustomerPage() {
                             <div
                               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
                                 isActive
-                                  ? "bg-violet-600 text-white"
+                                  ? "bg-orange-600 text-white"
                                   : isDone
-                                  ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+                                  ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
                                   : "bg-muted text-muted-foreground"
                               }`}
                             >
                               {i + 1}
                             </div>
-                            <span className={`text-[10px] font-medium whitespace-nowrap ${isActive ? "text-violet-600" : isDone ? "text-violet-400" : "text-muted-foreground"}`}>
+                            <span className={`text-[10px] font-medium whitespace-nowrap ${isActive ? "text-orange-600" : isDone ? "text-orange-400" : "text-muted-foreground"}`}>
                               {step === "delivery" ? "Giao hàng" : step === "payment" ? "Thanh toán" : "Xác nhận"}
                             </span>
                           </div>
                           {i < 2 && (
                             <div
                               className={`flex-1 h-0.5 mx-2 mb-4 rounded ${
-                                i < currentIdx ? "bg-violet-400" : "bg-muted"
+                                i < currentIdx ? "bg-orange-400" : "bg-muted"
                               }`}
                             />
                           )}
@@ -890,8 +895,8 @@ export default function CustomerPage() {
               </div>
 
               {isAwaitingPaymentConfirmation && (
-                <div className="mx-5 mb-3 rounded-xl border border-violet-200 bg-violet-50/70 px-4 py-3">
-                  <p className="flex items-center gap-2 text-sm font-medium text-violet-700">
+                <div className="mx-5 mb-3 rounded-xl border border-orange-200 bg-orange-50/70 px-4 py-3">
+                  <p className="flex items-center gap-2 text-sm font-medium text-orange-700">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Đang chờ backend xác nhận thanh toán thành công...
                   </p>
@@ -900,7 +905,7 @@ export default function CustomerPage() {
 
               {isCreatingPaymentLink ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 px-5 pb-6">
-                  <Loader2 className="w-10 h-10 animate-spin text-violet-600" />
+                  <Loader2 className="w-10 h-10 animate-spin text-orange-600" />
                   <p className="font-semibold text-center">Đang tạo mã QR thanh toán...</p>
                   <p className="text-sm text-muted-foreground text-center">
                     Vui lòng chờ trong giây lát.
@@ -911,13 +916,18 @@ export default function CustomerPage() {
                   <ScrollArea className="flex-1 min-h-0">
                     <div className="px-5 pb-4 space-y-4">
                       <div className="grid gap-6 md:grid-cols-[260px_minmax(0,400px)] justify-center">
-                      <div className="border rounded-2xl p-3 bg-white w-fit mx-auto md:mx-0 flex-shrink-0">
-                        <QRCodeSVG
-                          value={paymentLinkData.qrCode}
-                          size={250}
-                          includeMargin
-                          level="H"
-                        />
+                      <div className="mt-10 border rounded-2xl p-1 bg-white w-[260px] h-[260px] mx-auto md:mx-0 flex-shrink-0 flex items-center justify-center">
+                        {paymentQrImageUrl ? (
+                          <Image
+                            src={paymentQrImageUrl}
+                            alt="VietQR thanh toan"
+                            width={250}
+                            height={250}
+                            className="w-[250px] h-[250px] rounded-lg object-contain object-center"
+                          />
+                        ) : (
+                          <div className="w-[250px] h-[250px] rounded-lg bg-muted" />
+                        )}
                       </div>
 
                       <div className="space-y-3 min-w-0">
@@ -1081,7 +1091,7 @@ export default function CustomerPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
-                      <User className="w-4 h-4 text-violet-500" />
+                      <User className="w-4 h-4 text-orange-500" />
                       Họ và tên *
                     </label>
                     <Input
@@ -1095,7 +1105,7 @@ export default function CustomerPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
-                      <Phone className="w-4 h-4 text-violet-500" />
+                      <Phone className="w-4 h-4 text-orange-500" />
                       Số điện thoại *
                     </label>
                     <Input
@@ -1112,7 +1122,7 @@ export default function CustomerPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-violet-500" />
+                      <MapPin className="w-4 h-4 text-orange-500" />
                       Địa chỉ giao hàng *
                     </label>
                     <Input
@@ -1129,7 +1139,7 @@ export default function CustomerPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
-                      <FileText className="w-4 h-4 text-violet-500" />
+                      <FileText className="w-4 h-4 text-orange-500" />
                       Ghi chú (tùy chọn)
                     </label>
                     <Input
@@ -1156,14 +1166,14 @@ export default function CustomerPage() {
                       onClick={() => setPaymentMethod(opt.value)}
                       className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left ${
                         paymentMethod === opt.value
-                          ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20"
-                          : "border-border/50 hover:border-violet-200"
+                          ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20"
+                          : "border-border/50 hover:border-orange-200"
                       }`}
                     >
                       <div
                         className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                           paymentMethod === opt.value
-                            ? "bg-violet-500 text-white"
+                            ? "bg-orange-500 text-white"
                             : "bg-muted text-muted-foreground"
                         }`}
                       >
@@ -1178,12 +1188,12 @@ export default function CustomerPage() {
                       <div
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                           paymentMethod === opt.value
-                            ? "border-violet-500"
+                            ? "border-orange-500"
                             : "border-border"
                         }`}
                       >
                         {paymentMethod === opt.value && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-violet-500" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
                         )}
                       </div>
                     </button>
@@ -1194,7 +1204,7 @@ export default function CustomerPage() {
               {/* Success */}
               {checkoutStep === "success" && (
                 <div className="text-center py-8">
-                  <div className="w-20 h-20 rounded-full bg-violet-500 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/30">
+                  <div className="w-20 h-20 rounded-full bg-orange-500 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-500/30">
                     <CheckCircle2 className="w-10 h-10 text-white" />
                   </div>
                   <h2 className="text-2xl font-bold mb-2">
@@ -1229,7 +1239,7 @@ export default function CustomerPage() {
 
                   <Button
                     onClick={() => handleCloseCheckout(false)}
-                    className="bg-violet-600 hover:bg-violet-700 text-white rounded-full px-8"
+                    className="bg-orange-600 hover:bg-orange-700 text-white rounded-full px-8"
                   >
                     Tiếp tục mua sắm
                   </Button>
@@ -1267,7 +1277,7 @@ export default function CustomerPage() {
                 )}
 
                 <Button
-                  className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-full"
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white rounded-full"
                   disabled={
                     (checkoutStep === "delivery" && !isDeliveryValid) ||
                     isSubmittingOrder ||
@@ -1318,7 +1328,7 @@ export default function CustomerPage() {
         <DialogContent className="sm:max-w-sm p-0 gap-0 max-h-[85vh] flex flex-col">
           <DialogHeader className="px-5 pt-5 pb-3">
             <DialogTitle className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-violet-600" />
+              <Bell className="w-4 h-4 text-orange-600" />
               Thông báo
               {notifications.filter((n) => !n.read).length > 0 && (
                 <Badge className="bg-red-500 text-white text-xs h-5 px-1.5">
@@ -1344,14 +1354,14 @@ export default function CustomerPage() {
                 {notifications.map((notif) => (
                   <div
                     key={notif.id}
-                    className={`flex items-start gap-3 px-5 py-3.5 hover:bg-muted/40 transition-colors cursor-pointer ${!notif.read ? "bg-violet-50/60 dark:bg-violet-950/20" : ""}`}
+                    className={`flex items-start gap-3 px-5 py-3.5 hover:bg-muted/40 transition-colors cursor-pointer ${!notif.read ? "bg-orange-50/60 dark:bg-orange-950/20" : ""}`}
                     onClick={() =>
                       setNotifications((prev) =>
                         prev.map((n) => n.id === notif.id ? { ...n, read: true } : n)
                       )
                     }
                   >
-                    <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${!notif.read ? "bg-violet-500" : "bg-muted"}`}>
+                    <div className={`mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${!notif.read ? "bg-orange-500" : "bg-muted"}`}>
                       <Bell className={`w-3.5 h-3.5 ${!notif.read ? "text-white" : "text-muted-foreground"}`} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1362,7 +1372,7 @@ export default function CustomerPage() {
                       <p className="text-xs text-muted-foreground/70 mt-1">{notif.time}</p>
                     </div>
                     {!notif.read && (
-                      <div className="flex-shrink-0 w-2 h-2 rounded-full bg-violet-500 mt-1.5" />
+                      <div className="flex-shrink-0 w-2 h-2 rounded-full bg-orange-500 mt-1.5" />
                     )}
                   </div>
                 ))}
@@ -1377,7 +1387,7 @@ export default function CustomerPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-full"
+                  className="w-full text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-full"
                   onClick={() => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))}
                 >
                   Đánh dấu tất cả đã đọc
@@ -1393,7 +1403,7 @@ export default function CustomerPage() {
         <DialogContent className="sm:max-w-md p-0 gap-0 max-h-[90vh] flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle className="flex items-center gap-2">
-              <User className="w-4 h-4 text-violet-600" />
+              <User className="w-4 h-4 text-orange-600" />
               Cập nhật hồ sơ
             </DialogTitle>
             <DialogDescription>
@@ -1408,18 +1418,18 @@ export default function CustomerPage() {
               {/* Avatar Upload */}
               <div className="flex flex-col items-center gap-3">
                 <div className="relative">
-                  <Avatar className="h-20 w-20 border-4 border-violet-100 dark:border-violet-900">
+                  <Avatar className="h-20 w-20 border-4 border-orange-100 dark:border-orange-900">
                     {avatarPreview ? (
                       <AvatarImage src={avatarPreview} alt="Avatar" />
                     ) : null}
-                    <AvatarFallback className="bg-violet-500 text-white text-2xl font-bold">
+                    <AvatarFallback className="bg-orange-500 text-white text-2xl font-bold">
                       {profileForm.name?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <button
                     type="button"
                     onClick={() => avatarInputRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-violet-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
                   >
                     <Camera className="w-3.5 h-3.5" />
                   </button>
@@ -1444,7 +1454,7 @@ export default function CustomerPage() {
               {/* Personal Info */}
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  <User className="w-4 h-4 text-violet-500" />
+                  <User className="w-4 h-4 text-orange-500" />
                   Thông tin cá nhân
                 </h4>
 
@@ -1460,7 +1470,7 @@ export default function CustomerPage() {
 
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                    <Phone className="w-3.5 h-3.5 inline mr-1 text-violet-500" />
+                    <Phone className="w-3.5 h-3.5 inline mr-1 text-orange-500" />
                     Số điện thoại
                   </label>
                   <Input
@@ -1474,7 +1484,7 @@ export default function CustomerPage() {
 
                 <div>
                   <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                    <MapPin className="w-3.5 h-3.5 inline mr-1 text-violet-500" />
+                    <MapPin className="w-3.5 h-3.5 inline mr-1 text-orange-500" />
                     Địa chỉ
                   </label>
                   <Input
@@ -1491,7 +1501,7 @@ export default function CustomerPage() {
               {/* Change Password */}
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  <Lock className="w-4 h-4 text-violet-500" />
+                  <Lock className="w-4 h-4 text-orange-500" />
                   Đổi mật khẩu
                 </h4>
 
@@ -1571,7 +1581,7 @@ export default function CustomerPage() {
               Hủy
             </Button>
             <Button
-              className="flex-1 bg-violet-600 hover:bg-violet-700 text-white rounded-full"
+              className="flex-1 bg-orange-600 hover:bg-orange-700 text-white rounded-full"
               disabled={
                 !!(profileForm.confirmPassword && profileForm.newPassword !== profileForm.confirmPassword)
               }
@@ -1594,7 +1604,7 @@ export default function CustomerPage() {
 
 function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
   return (
-    <Card className="group overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm hover:border-violet-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/5 hover:-translate-y-1 flex flex-col">
+    <Card className="group overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm hover:border-orange-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/5 hover:-translate-y-1 flex flex-col">
       <div className="relative aspect-[4/3] overflow-hidden flex-shrink-0">
         <Image
           src={item.image}
@@ -1616,14 +1626,14 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 
         {/* Category badge */}
         <div className="absolute top-3 left-3">
-          <Badge className="bg-white/90 dark:bg-black/70 text-foreground backdrop-blur-sm text-xs">
+          <Badge className="bg-white/90 dark:bg-stone-950/70 text-foreground backdrop-blur-sm text-xs">
             {item.categoryName}
           </Badge>
         </div>
 
         {/* Prep time */}
         <div className="absolute top-3 right-3">
-          <Badge className="bg-violet-600 hover:bg-violet-700 text-white text-xs">
+          <Badge className="bg-orange-600 hover:bg-orange-700 text-white text-xs">
             <Clock className="w-3 h-3 mr-1" />
             {item.preparationTime} phút
           </Badge>
@@ -1632,7 +1642,7 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 
       <CardContent className="p-4 flex flex-col flex-1">
         <div className="flex justify-between items-start mb-1.5">
-          <h3 className="font-semibold text-base leading-tight flex-1 pr-2 group-hover:text-violet-600 transition-colors">
+          <h3 className="font-semibold text-base leading-tight flex-1 pr-2 group-hover:text-orange-600 transition-colors">
             {item.name}
           </h3>
         </div>
@@ -1642,7 +1652,7 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
 
         <div className="flex items-center justify-between mt-auto">
           <div>
-            <span className="text-lg font-bold text-violet-600 dark:text-violet-400">
+            <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
               {formatCurrency(item.price)}
             </span>
           </div>
@@ -1651,7 +1661,7 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
             onClick={onAdd}
             disabled={!item.isAvailable}
             size="sm"
-            className="bg-violet-600 hover:bg-violet-700 text-white rounded-full px-4 disabled:bg-gray-400"
+            className="bg-orange-600 hover:bg-orange-700 text-white rounded-full px-4 disabled:bg-stone-400"
           >
             <Plus className="w-4 h-4 mr-1" />
             Thêm

@@ -35,7 +35,7 @@ export function TableCard({ table, onClick, showQR = true, onGenerateQR, isGener
         <Card
             className={`transition-all duration-300 hover:scale-105 hover:shadow-lg ${table.status === "available"
                     ? "hover:border-emerald-500/50"
-                    : "hover:border-violet-500/50"
+                    : "hover:border-orange-500/50"
                 }`}
         >
             <CardContent className="p-4">
@@ -79,7 +79,7 @@ export function TableCard({ table, onClick, showQR = true, onGenerateQR, isGener
                         <Button
                             variant="outline"
                             size="sm"
-                            className="w-full gap-1.5 text-violet-600 border-violet-300 hover:bg-violet-50 dark:hover:bg-violet-950"
+                            className="w-full gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950"
                             onClick={(e) => { e.stopPropagation(); onGenerateQR(); }}
                             disabled={isGeneratingQR}
                         >
@@ -96,7 +96,7 @@ export function TableCard({ table, onClick, showQR = true, onGenerateQR, isGener
                         <Button
                             variant="outline"
                             size="sm"
-                            className="w-full gap-1.5 text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
+                            className="w-full gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950"
                             onClick={(e) => { e.stopPropagation(); onRefreshQR(); }}
                             disabled={isRefreshingQR}
                         >

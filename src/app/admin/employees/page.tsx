@@ -25,11 +25,11 @@ import { Employee, Role } from "@/types";
 import { getAccountsApi, mapAccountToEmployee } from "@/services/account.service";
 
 const roleColors: Record<Role, string> = {
-    admin: "bg-violet-500",
+    admin: "bg-orange-500",
     chef: "bg-orange-500",
-    waiter: "bg-blue-500",
+    waiter: "bg-amber-500",
     cashier: "bg-emerald-500",
-    customer: "bg-gray-500",
+    customer: "bg-stone-500",
 };
 
 export default function EmployeesPage() {
@@ -150,7 +150,7 @@ export default function EmployeesPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold">
-                        <span className="text-violet-600">
+                        <span className="text-orange-600">
                             Employees
                         </span>
                     </h1>
@@ -176,7 +176,7 @@ export default function EmployeesPage() {
                     </Select>
                     <Button
                         onClick={() => handleOpenDialog()}
-                        className="bg-violet-600 hover:bg-violet-700 text-white"
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -202,9 +202,9 @@ export default function EmployeesPage() {
 
             {/* Role Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="border-violet-500/20 bg-violet-500/5">
+                <Card className="border-orange-500/20 bg-orange-500/5">
                     <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold text-violet-600 dark:text-violet-400">
+                        <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                             {roleCounts.admin}
                         </div>
                         <div className="text-sm text-muted-foreground">Admins</div>
@@ -218,9 +218,9 @@ export default function EmployeesPage() {
                         <div className="text-sm text-muted-foreground">Chefs</div>
                     </CardContent>
                 </Card>
-                <Card className="border-blue-500/20 bg-blue-500/5">
+                <Card className="border-amber-500/20 bg-amber-500/5">
                     <CardContent className="p-4 text-center">
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
                             {roleCounts.waiter}
                         </div>
                         <div className="text-sm text-muted-foreground">Waiters</div>
@@ -422,7 +422,7 @@ export default function EmployeesPage() {
                         </Button>
                         <Button
                             onClick={handleSave}
-                            className="bg-violet-600 hover:bg-violet-700 text-white"
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
                         >
                             {editingEmployee ? "Save Changes" : "Add Employee"}
                         </Button>

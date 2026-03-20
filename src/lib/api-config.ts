@@ -54,6 +54,11 @@ export const API_ENDPOINTS = {
         createBill: `${API_BASE_URL}/api/Cashier/bill`,
     },
 
+    // ==================== WORK SCHEDULE ====================
+    workSchedule: {
+        checkIn: (accountId: string) => `${API_BASE_URL}/api/WorkSchedule/CheckIn/${accountId}`,
+    },
+
     // ==================== TABLES ====================
     tables: {
         list: `${API_BASE_URL}/api/Table`,
