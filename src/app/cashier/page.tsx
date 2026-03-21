@@ -652,11 +652,29 @@ export default function CashierPOSPage() {
     setBillId(currentBillId);
 
     if (!paymentInfoData.paymentMetadata) {
+      setPaymentLinkData(null);
+      setPaymentMethod("cash");
       await updateOrderStatus({
         id: orderId,
         newStatus: DEFAULT_PAYMENT_ORDER_STATUS,
       });
+      return;
     }
+
+    setPaymentMethod("bank");
+    setPaymentLinkData({
+      bin: paymentInfoData.paymentMetadata.bin,
+      accountNumber: paymentInfoData.paymentMetadata.accountNumber,
+      accountName: paymentInfoData.paymentMetadata.accountName,
+      amount: paymentInfoData.amount,
+      description: paymentInfoData.paymentMetadata.description,
+      orderCode: paymentInfoData.orderCode,
+      currency: "VND",
+      paymentLinkId: "",
+      status: paymentInfoData.status,
+      checkoutUrl: "",
+      qrCode: paymentInfoData.paymentMetadata.qrCode,
+    });
   }, []);
 
   const handleCreateBillAndPayment = useCallback(async () => {
