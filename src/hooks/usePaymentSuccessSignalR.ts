@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   HubConnectionBuilder,
   HttpTransportType,
@@ -11,6 +11,8 @@ import { getToken } from "@/lib/auth";
 type RawPaymentMessage = {
   OrderId?: string;
   orderId?: string;
+  OrderCode?: number;
+  orderCode?: number;
   Amount?: number;
   amount?: number;
   PaymentMethod?: string;
@@ -21,14 +23,35 @@ type RawPaymentMessage = {
 
 export type PaymentMessage = {
   orderId: string;
+  orderCode: number;
   amount: number;
   paymentMethod: string;
   paidAt: string;
 };
 
+export type UsePaymentSuccessSignalROptions = {
+  enabled?: boolean;
+  subscribeOrderCodes?: number[];
+  requireToken?: boolean;
+};
+
+function normalizeOrderCodes(orderCodes: number[] | undefined): number[] {
+  if (!orderCodes || orderCodes.length === 0) return [];
+
+  return Array.from(
+    new Set(
+      orderCodes
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value) && value > 0)
+        .map((value) => Math.trunc(value)),
+    ),
+  );
+}
+
 function normalizePaymentMessage(raw: RawPaymentMessage): PaymentMessage {
   return {
     orderId: raw.orderId || raw.OrderId || "",
+    orderCode: raw.orderCode ?? raw.OrderCode ?? 0,
     amount: raw.amount ?? raw.Amount ?? 0,
     paymentMethod: raw.paymentMethod || raw.PaymentMethod || "",
     paidAt: raw.paidAt || raw.PaidAt || "",
@@ -37,8 +60,25 @@ function normalizePaymentMessage(raw: RawPaymentMessage): PaymentMessage {
 
 export function usePaymentSuccessSignalR(
   onMessage: (message: PaymentMessage) => void,
-  enabled = true,
+  enabledOrOptions: boolean | UsePaymentSuccessSignalROptions = true,
 ) {
+  const options =
+    typeof enabledOrOptions === "boolean"
+      ? { enabled: enabledOrOptions }
+      : enabledOrOptions;
+
+  const {
+    enabled = true,
+    subscribeOrderCodes = [],
+    requireToken = false,
+  } = options;
+
+  const normalizedOrderCodes = useMemo(
+    () => normalizeOrderCodes(subscribeOrderCodes),
+    [subscribeOrderCodes],
+  );
+  const orderCodeSubscriptionKey = normalizedOrderCodes.join(",");
+
   const onMessageRef = useRef(onMessage);
 
   useEffect(() => {
@@ -49,16 +89,31 @@ export function usePaymentSuccessSignalR(
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
     if (!enabled || !baseUrl || typeof window === "undefined") return;
 
-    const getAccessToken = () =>
-      getToken() || localStorage.getItem("accessToken") || "";
+    const orderCodesToSubscribe = orderCodeSubscriptionKey
+      ? orderCodeSubscriptionKey
+          .split(",")
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value) && value > 0)
+      : [];
 
-    if (!getAccessToken()) return;
+    const getAccessToken =
+      () => getToken() || localStorage.getItem("accessToken") || "";
+    const initialAccessToken = getAccessToken();
+    if (requireToken && !initialAccessToken) return;
+
+    const connectionOptions: {
+      accessTokenFactory?: () => string;
+      transport: HttpTransportType;
+    } = {
+      transport: HttpTransportType.WebSockets,
+    };
+
+    if (initialAccessToken) {
+      connectionOptions.accessTokenFactory = getAccessToken;
+    }
 
     const connection = new HubConnectionBuilder()
-      .withUrl(`${baseUrl}/hubs/restaurant`, {
-        accessTokenFactory: getAccessToken,
-        transport: HttpTransportType.WebSockets,
-      })
+      .withUrl(`${baseUrl}/hubs/restaurant`, connectionOptions)
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Information)
       .build();
@@ -68,13 +123,22 @@ export function usePaymentSuccessSignalR(
     };
 
     connection.on("NotifyPaymentSuccess", handler);
-    void connection.start().catch((error) => {
-      console.error("SignalR NotifyPaymentSuccess connection error:", error);
-    });
+
+    void (async () => {
+      try {
+        await connection.start();
+
+        for (const orderCode of orderCodesToSubscribe) {
+          await connection.invoke("SubscribeOrderCode", orderCode);
+        }
+      } catch (error) {
+        console.error("SignalR NotifyPaymentSuccess connection error:", error);
+      }
+    })();
 
     return () => {
       connection.off("NotifyPaymentSuccess", handler);
       void connection.stop().catch(() => {});
     };
-  }, [enabled]);
+  }, [enabled, orderCodeSubscriptionKey, requireToken]);
 }

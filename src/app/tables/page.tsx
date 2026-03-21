@@ -198,9 +198,9 @@ export default function TablesPage() {
     const areaName = areaTables[0]?.areaName;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="min-h-screen bg-stone-50 dark:bg-stone-950">
             {/* Header */}
-            <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
+            <header className="bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
                         {isWaiter && (
@@ -211,13 +211,13 @@ export default function TablesPage() {
                             </Button>
                         )}
                         <div>
-                            <h1 className="text-xl font-bold text-violet-600">
+                            <h1 className="text-xl font-bold text-orange-600">
                                 Quản lý bàn ăn
                             </h1>
                             <p className="text-sm text-muted-foreground">
                                 {user ? `Xin chào, ${user.name}` : "Theo dõi và quản lý trạng thái bàn"}
                                 {areaName && (
-                                    <span className="ml-1 text-violet-600 dark:text-violet-400">— {areaName}</span>
+                                    <span className="ml-1 text-orange-600 dark:text-orange-400">— {areaName}</span>
                                 )}
                             </p>
                         </div>
@@ -230,7 +230,7 @@ export default function TablesPage() {
                             </Button>
                         )}
                         {isAuthenticated && (
-                            <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5 text-gray-500 hover:text-red-600 px-3">
+                            <Button variant="ghost" size="sm" onClick={logout} className="gap-1.5 text-stone-500 hover:text-red-600 px-3">
                                 <LogOut size={15} />
                                 <span>Đăng xuất</span>
                             </Button>
@@ -244,7 +244,7 @@ export default function TablesPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
                         { icon: <TableProperties size={22} />, value: statusCounts.available, label: "Bàn trống", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" },
-                        { icon: <UtensilsCrossed size={22} />, value: statusCounts.occupied, label: "Có khách", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10" },
+                        { icon: <UtensilsCrossed size={22} />, value: statusCounts.occupied, label: "Có khách", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
                         { icon: <Clock size={22} />, value: statusCounts["waiting-food"], label: "Chờ món", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" },
                         { icon: <CreditCard size={22} />, value: statusCounts["waiting-payment"], label: "Chờ thanh toán", color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10" },
                     ].map(({ icon, value, label, color, bg }) => (
@@ -268,8 +268,8 @@ export default function TablesPage() {
                             onClick={() => setFilter(sf.value)}
                             className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                                 filter === sf.value
-                                    ? "bg-violet-600 text-white border-violet-600"
-                                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-violet-400"
+                                    ? "bg-orange-600 text-white border-orange-600"
+                                    : "bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:border-orange-400"
                             }`}
                         >
                             {sf.label}

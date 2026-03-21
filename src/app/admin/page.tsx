@@ -24,7 +24,7 @@ export default function AdminDashboardPage() {
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold">
-                    <span className="text-violet-600">
+                    <span className="text-orange-600">
                         Dashboard
                     </span>
                 </h1>
@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
                                     key={dish.menuItem.id}
                                     className="flex items-center gap-4"
                                 >
-                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-violet-600 text-white text-sm font-bold">
+                                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-600 text-white text-sm font-bold">
                                         {index + 1}
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -173,7 +173,7 @@ export default function AdminDashboardPage() {
                                         </p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-semibold text-violet-600 dark:text-violet-400">
+                                        <p className="font-semibold text-orange-600 dark:text-orange-400">
                                             {formatCurrency(dish.revenue)}
                                         </p>
                                     </div>

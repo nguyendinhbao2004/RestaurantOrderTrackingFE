@@ -24,6 +24,7 @@ export interface CreateOnlineOrderRequest {
 
 export interface OnlineOrderData {
   orderId: string;
+  orderCode?: number;
   billId: string;
   paymentMethod: number;
 }
@@ -44,6 +45,16 @@ export interface PaymentLinkData {
   status: string;
   checkoutUrl: string;
   qrCode: string;
+}
+
+export function buildVietQrImageUrl(paymentLink: Pick<PaymentLinkData, "bin" | "accountNumber" | "description" | "amount">) {
+  const imagePath = `${paymentLink.bin}-${paymentLink.accountNumber}-vietqr_pro.jpg`;
+  const query = new URLSearchParams({
+    addInfo: paymentLink.description,
+    amount: String(paymentLink.amount),
+  });
+
+  return `https://img.vietqr.io/image/${imagePath}?${query.toString()}`;
 }
 
 export async function createOnlineOrder(payload: CreateOnlineOrderRequest) {

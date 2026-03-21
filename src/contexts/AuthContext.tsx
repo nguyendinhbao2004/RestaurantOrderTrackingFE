@@ -13,6 +13,7 @@ import {
     isPublicRoute,
 } from '@/lib/auth';
 import { loginApi } from '@/services/auth.service';
+import { cacheCashierCheckInNotice, checkInCashierShift } from '@/services/work-schedule.service';
 
 interface AuthContextType {
     user: User | null;
@@ -93,6 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setToken(accessToken);
             localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
             if (areaId) localStorage.setItem(AREA_ID_KEY, areaId);
+
+            if (authUser.role === 'cashier') {
+                try {
+                    const notice = await checkInCashierShift(authUser.id, accessToken);
+                    cacheCashierCheckInNotice(notice);
+                } catch {
+                    cacheCashierCheckInNotice({
+                        type: 'error',
+                        message: 'Unable to check in. Please contact admin.',
+                    });
+                }
+            }
 
             setUser(authUser);
 

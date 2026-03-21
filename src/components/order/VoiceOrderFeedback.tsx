@@ -34,10 +34,10 @@ export function VoiceOrderFeedback({
     if (!hasContent) return null;
 
     return (
-        <Card className="border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/20 backdrop-blur-sm shadow-lg shadow-violet-500/5 overflow-hidden">
+        <Card className="border-orange-500/30 bg-orange-50/50 dark:bg-orange-950/20 backdrop-blur-sm shadow-lg shadow-orange-500/5 overflow-hidden">
             {/* Listening indicator bar */}
             {isListening && (
-                <div className="h-1 bg-violet-500 bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite]" />
+                <div className="h-1 bg-orange-500 bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite]" />
             )}
 
             <CardContent className="p-4 space-y-3">
@@ -47,13 +47,13 @@ export function VoiceOrderFeedback({
                         {isListening ? (
                             <>
                                 <div className="flex items-center gap-1">
-                                    <span className="w-1.5 h-3 bg-violet-500 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite]" />
-                                    <span className="w-1.5 h-4 bg-violet-600 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.1s]" />
-                                    <span className="w-1.5 h-2.5 bg-violet-500 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.2s]" />
-                                    <span className="w-1.5 h-5 bg-violet-600 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.3s]" />
-                                    <span className="w-1.5 h-3 bg-violet-500 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.15s]" />
+                                    <span className="w-1.5 h-3 bg-orange-500 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite]" />
+                                    <span className="w-1.5 h-4 bg-orange-600 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.1s]" />
+                                    <span className="w-1.5 h-2.5 bg-orange-500 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.2s]" />
+                                    <span className="w-1.5 h-5 bg-orange-600 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.3s]" />
+                                    <span className="w-1.5 h-3 bg-orange-500 rounded-full animate-[soundbar_0.5s_ease-in-out_infinite_0.15s]" />
                                 </div>
-                                <span className="text-sm font-medium text-violet-700 dark:text-violet-300">
+                                <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
                                     Listening...
                                 </span>
                             </>
@@ -111,7 +111,7 @@ export function VoiceOrderFeedback({
 
                 {/* Transcript */}
                 {(transcript || interimTranscript) && (
-                    <div className="p-3 bg-white/60 dark:bg-white/5 rounded-lg border border-violet-200/50 dark:border-violet-800/30">
+                    <div className="p-3 bg-white/60 dark:bg-white/5 rounded-lg border border-orange-200/50 dark:border-orange-800/30">
                         <p className="text-xs text-muted-foreground mb-1 font-medium">
                             You said:
                         </p>
@@ -131,7 +131,7 @@ export function VoiceOrderFeedback({
 
                 {/* Processing indicator */}
                 {isProcessing && (
-                    <div className="flex items-center gap-2 p-2 bg-violet-50 dark:bg-violet-950/20 rounded-lg text-violet-700 dark:text-violet-300 text-sm">
+                    <div className="flex items-center gap-2 p-2 bg-orange-50 dark:bg-orange-950/20 rounded-lg text-orange-700 dark:text-orange-300 text-sm">
                         <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -143,7 +143,7 @@ export function VoiceOrderFeedback({
                 {/* Matched Items */}
                 {matchedItems.length > 0 && (
                     <>
-                        <Separator className="bg-violet-200/50 dark:bg-violet-800/30" />
+                        <Separator className="bg-orange-200/50 dark:bg-orange-800/30" />
                         <div className="space-y-2">
                             <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
                                 <svg
@@ -172,7 +172,7 @@ export function VoiceOrderFeedback({
                                     <div className="flex items-center gap-2">
                                         <Badge
                                             variant="secondary"
-                                            className="bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 text-xs"
+                                            className="bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 text-xs"
                                         >
                                             ×{item.quantity}
                                         </Badge>
@@ -180,7 +180,7 @@ export function VoiceOrderFeedback({
                                             {item.menuItem.name}
                                         </span>
                                     </div>
-                                    <span className="text-sm font-semibold text-violet-600 dark:text-violet-400">
+                                    <span className="text-sm font-semibold text-orange-600 dark:text-orange-400">
                                         {formatCurrency(
                                             item.menuItem.price * item.quantity
                                         )}

@@ -4,7 +4,6 @@ import { httpClient } from "@/lib/http-client";
 export enum ApiOrderType {
   DineIn = 0,
   TakeAway = 1,
-  Delivery = 2,
 }
 
 export interface CreateOrderRequest {

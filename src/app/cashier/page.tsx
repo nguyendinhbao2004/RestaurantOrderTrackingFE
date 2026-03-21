@@ -10,19 +10,20 @@ import { Separator } from "@/components/ui/separator";
 import {Dialog, DialogContent, DialogHeader, DialogTitle,DialogDescription,} from "@/components/ui/dialog";
 import {Search, Plus, Minus, Trash2, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy,
   Check, Banknote, CreditCard, CheckCircle2, LogOut, RefreshCw, UtensilsCrossed, Receipt,} from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useBanks } from "@/contexts/BanksContext";
 import { fetchTables } from "@/services/table.service";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
-import { createBill } from "@/services/cashier.service";
+import { createBill, getPaymentInfoByOrderId, payBill, PaymentInfoByOrderData,} from "@/services/cashier.service";
 import { ApiOrderType, createOrder, createOrderItems, resolveOrderId, updateOrderStatus,} from "@/services/order.service";
-import { createPaymentLink, PaymentLinkData,} from "@/services/online-order.service";
+import { buildVietQrImageUrl, createPaymentLink, PaymentLinkData,} from "@/services/online-order.service";
+import { CashierCheckInNotice, consumeCashierCheckInNotice,} from "@/services/work-schedule.service";
 import { formatCurrency, mapProductsToMenuItems } from "@/lib/helpers";
 import { API_ENDPOINTS } from "@/lib/api-config";
 import { httpClient } from "@/lib/http-client";
+import { usePaymentSuccessSignalR, type PaymentMessage,} from "@/hooks/usePaymentSuccessSignalR";
 import { MenuItem, Category } from "@/types";
 
 /* ─────────────────────── Types ─────────────────────── */
@@ -69,6 +70,10 @@ type CopyField = "accountNumber" | "amount" | "description";
 const TABLE_PAGE_SIZE = 8;
 const MENU_PAGE_SIZE = 6;
 const DEFAULT_PAYMENT_ORDER_STATUS = 4;
+const ORDER_TYPE_TOGGLE_OPTIONS = [
+  { value: ApiOrderType.DineIn, label: "TẠI CHỖ" },
+  { value: ApiOrderType.TakeAway, label: "MANG VỀ" },
+] as const;
 
 /* ─────────────────────── Helpers ─────────────────────── */
 
@@ -139,10 +144,10 @@ function getTableStatusColors(status: string) {
       };
     case "reserved":
       return {
-        bg: "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800",
+        bg: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
         badge:
-          "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-        dot: "bg-blue-500",
+          "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+        dot: "bg-amber-500",
       };
     case "outofservice":
       return {
@@ -155,7 +160,30 @@ function getTableStatusColors(status: string) {
       return {
         bg: "bg-muted border-border",
         badge: "bg-muted text-muted-foreground",
-        dot: "bg-gray-400",
+        dot: "bg-stone-400",
+      };
+  }
+}
+
+function getCheckInNoticeStyles(type: CashierCheckInNotice["type"]) {
+  switch (type) {
+    case "success":
+      return {
+        container:
+          "border-emerald-200 bg-emerald-50/95 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-100",
+        icon: "text-emerald-600 dark:text-emerald-300",
+      };
+    case "warning":
+      return {
+        container:
+          "border-amber-200 bg-amber-50/95 text-amber-900 dark:border-amber-800 dark:bg-amber-950/90 dark:text-amber-100",
+        icon: "text-amber-600 dark:text-amber-300",
+      };
+    default:
+      return {
+        container:
+          "border-rose-200 bg-rose-50/95 text-rose-900 dark:border-rose-800 dark:bg-rose-950/90 dark:text-rose-100",
+        icon: "text-rose-600 dark:text-rose-300",
       };
   }
 }
@@ -247,7 +275,7 @@ function mapTableDetailResponse(raw: unknown): TableDetail | null {
 /* ─────────────────────── Component ─────────────────────── */
 
 export default function CashierPOSPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
   const { findBankByBin } = useBanks();
 
   /* ── Tables ── */
@@ -257,6 +285,7 @@ export default function CashierPOSPage() {
   const [tableFilter, setTableFilter] = useState<
     "all" | "available" | "occupied"
   >("all");
+  const [selectedAreaName, setSelectedAreaName] = useState("all");
   const [tablePage, setTablePage] = useState(1);
   const [tableTotalPages, setTableTotalPages] = useState(1);
 
@@ -283,20 +312,28 @@ export default function CashierPOSPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [cashGiven, setCashGiven] = useState("");
+  const [isCheckingPaymentInfo, setIsCheckingPaymentInfo] = useState(false);
   const [isCreatingBill, setIsCreatingBill] = useState(false);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [billId, setBillId] = useState("");
-  const [paymentLinkData, setPaymentLinkData] =
-    useState<PaymentLinkData | null>(null);
+  const [paymentLinkData, setPaymentLinkData] = useState<PaymentLinkData | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isAwaitingTransferConfirmation, setIsAwaitingTransferConfirmation] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [pendingPaymentOrderId, setPendingPaymentOrderId] = useState("");
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
+  const [checkInNotice, setCheckInNotice] = useState<CashierCheckInNotice | null>(null);
 
   /* ── Derived ── */
   const selectedBank = useMemo(() => {
     if (!paymentLinkData?.bin) return undefined;
     return findBankByBin(paymentLinkData.bin);
   }, [findBankByBin, paymentLinkData]);
+
+  const paymentQrImageUrl = useMemo(() => {
+    if (!paymentLinkData) return null;
+    return buildVietQrImageUrl(paymentLinkData);
+  }, [paymentLinkData]);
 
   const cartTotal = useMemo(
     () => cart.reduce((s, i) => s + i.menuItem.price * i.quantity, 0),
@@ -374,6 +411,11 @@ export default function CashierPOSPage() {
     [menuItems],
   );
 
+  const checkInNoticeStyles = useMemo(() => {
+    if (!checkInNotice) return null;
+    return getCheckInNoticeStyles(checkInNotice.type);
+  }, [checkInNotice]);
+
   /* ─── Filtered menu items ─── */
   const filteredItems = useMemo(() => {
     let items = menuItems;
@@ -442,6 +484,24 @@ export default function CashierPOSPage() {
       .then((res) => setCategories(res.data))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const notice = consumeCashierCheckInNotice();
+    if (!notice) return;
+
+    setCheckInNotice(notice);
+
+  }, []);
+
+  useEffect(() => {
+    if (!checkInNotice) return;
+
+    const timer = window.setTimeout(() => {
+      setCheckInNotice(null);
+    }, 5000);
+
+    return () => window.clearTimeout(timer);
+  }, [checkInNotice]);
 
   const loadTableDetail = useCallback(async (tableId: string) => {
     setTableDetailLoading(true);
@@ -572,57 +632,53 @@ export default function CashierPOSPage() {
   const openPaymentModal = useCallback(() => {
     setPaymentMethod("cash");
     setCashGiven("");
+    setIsCheckingPaymentInfo(false);
     setBillId("");
     setPaymentLinkData(null);
     setPaymentSuccess(false);
+    setIsAwaitingTransferConfirmation(false);
     setPaymentError(null);
+    setPendingPaymentOrderId("");
     setCopiedField(null);
     setShowPaymentModal(true);
   }, []);
 
-  /* ─── Create bill + handle payment ─── */
-  const handleConfirmPayment = useCallback(async () => {
-    if (!activeOrder || !user) return;
-    setIsCreatingBill(true);
-    setPaymentError(null);
+  const preparePaymentFlow = useCallback(async (orderId: string) => {
+    const paymentInfoRes = await getPaymentInfoByOrderId(orderId);
+    const paymentInfoData: PaymentInfoByOrderData = paymentInfoRes.data;
+    const currentBillId = paymentInfoData.billId?.trim() || "";
 
-    try {
+    setPendingPaymentOrderId(orderId);
+    setBillId(currentBillId);
+
+    if (!paymentInfoData.paymentMetadata) {
       await updateOrderStatus({
-        id: activeOrder.id,
+        id: orderId,
         newStatus: DEFAULT_PAYMENT_ORDER_STATUS,
       });
+    }
+  }, []);
 
-      const apiPaymentMethod = paymentMethod === "cash" ? 1 : 3;
-      const billRes = await createBill({
-        orderId: activeOrder.id,
-        cashierAccountId: user.id,
-        paymentMethod: apiPaymentMethod,
-        discount: 0,
-      });
+  const handleCreateBillAndPayment = useCallback(async () => {
+    openPaymentModal();
+    if (!activeOrder) return;
 
-      const newBillId = billRes.data as string;
-      setBillId(newBillId);
+    setPaymentError(null);
+    setIsCheckingPaymentInfo(true);
 
-      if (paymentMethod === "cash") {
-        // Cash: done immediately
-        setPaymentSuccess(true);
-        markTableAvailable();
-      } else {
-        // Bank transfer: create payment link for QR
-        setIsCreatingBill(false);
-        setIsCreatingLink(true);
-        const linkRes = await createPaymentLink({ billId: newBillId });
-        setPaymentLinkData(linkRes.data);
-      }
-    } catch (err: any) {
+    try {
+      await preparePaymentFlow(activeOrder.id);
+    } catch (error) {
       setPaymentError(
-        err?.message || "Không thể tạo hóa đơn. Vui lòng thử lại.",
+        getApiErrorMessage(
+          error,
+          "Không thể kiểm tra thông tin thanh toán. Vui lòng thử lại.",
+        ),
       );
     } finally {
-      setIsCreatingBill(false);
-      setIsCreatingLink(false);
+      setIsCheckingPaymentInfo(false);
     }
-  }, [activeOrder, user, paymentMethod]);
+  }, [activeOrder, openPaymentModal, preparePaymentFlow]);
 
   const markTableAvailable = useCallback(() => {
     if (!selectedTable) return;
@@ -636,17 +692,141 @@ export default function CashierPOSPage() {
     setSelectedTable(null);
   }, [selectedTable]);
 
+  /* ─── Create bill + handle payment ─── */
+  const handleConfirmPayment = useCallback(async () => {
+    if (!activeOrder || !user || isCheckingPaymentInfo) return;
+
+    const orderId = activeOrder.id;
+    const isBankPayment = paymentMethod === "bank";
+
+    setPaymentError(null);
+    setIsAwaitingTransferConfirmation(false);
+    setPaymentSuccess(false);
+
+    if (isBankPayment) {
+      setIsCreatingLink(true);
+    } else {
+      setIsCreatingBill(true);
+    }
+
+    try {
+      let nextBillId = billId.trim();
+      if (!nextBillId) {
+        await updateOrderStatus({
+          id: orderId,
+          newStatus: DEFAULT_PAYMENT_ORDER_STATUS,
+        });
+
+        const billRes = await createBill({
+          orderId,
+          cashierAccountId: user.id,
+          paymentMethod: isBankPayment ? 3 : 1,
+          discount: 0,
+        });
+
+        nextBillId = String(billRes.data ?? "").trim();
+      }
+
+      if (!nextBillId) {
+        throw new Error("Không lấy được billId để tiếp tục thanh toán.");
+      }
+
+      setBillId(nextBillId);
+
+      if (isBankPayment) {
+        const linkRes = await createPaymentLink({ billId: nextBillId });
+        setPendingPaymentOrderId(orderId);
+        setPaymentLinkData(linkRes.data);
+        return;
+      }
+
+      await payBill({ billId: nextBillId });
+
+      setPendingPaymentOrderId("");
+      setPaymentLinkData(null);
+      setIsAwaitingTransferConfirmation(false);
+      setPaymentSuccess(true);
+      markTableAvailable();
+    } catch (error) {
+      setPaymentError(
+        getApiErrorMessage(
+          error,
+          isBankPayment
+            ? "Không thể tạo mã chuyển khoản. Vui lòng thử lại."
+            : "Không thể thanh toán hóa đơn. Vui lòng thử lại.",
+        ),
+      );
+    } finally {
+      setIsCreatingBill(false);
+      setIsCreatingLink(false);
+    }
+  }, [activeOrder, billId, isCheckingPaymentInfo, markTableAvailable, paymentMethod, user]);
+
   const handleMarkTransferDone = useCallback(() => {
-    setPaymentSuccess(true);
-    markTableAvailable();
-  }, [markTableAvailable]);
+    if (!pendingPaymentOrderId && !activeOrder?.id) {
+      return;
+    }
+
+    setPaymentError(null);
+    setIsAwaitingTransferConfirmation(true);
+  }, [activeOrder?.id, pendingPaymentOrderId]);
 
   const handleClosePaymentModal = useCallback(() => {
     setShowPaymentModal(false);
-    if (paymentSuccess) {
-      // already cleared in markTableAvailable
+  }, []);
+
+  const paymentSignalROrderCodes = useMemo(() => {
+    const orderCode = paymentLinkData?.orderCode;
+    if (!Number.isFinite(orderCode) || !orderCode || orderCode <= 0) {
+      return [];
     }
-  }, [paymentSuccess]);
+
+    return [Math.trunc(orderCode)];
+  }, [paymentLinkData?.orderCode]);
+
+  const handlePaymentSuccessMessage = useCallback(
+    (message: PaymentMessage) => {
+      const incomingOrderId = message.orderId.trim();
+      const incomingOrderCode =
+        Number.isFinite(message.orderCode) && message.orderCode > 0
+          ? Math.trunc(message.orderCode)
+          : 0;
+
+      const targetOrderId = (pendingPaymentOrderId || activeOrder?.id || "").trim();
+      const targetOrderCode =
+        paymentLinkData?.orderCode && paymentLinkData.orderCode > 0
+          ? Math.trunc(paymentLinkData.orderCode)
+          : 0;
+
+      const isMatchedByOrderId =
+        !!incomingOrderId && !!targetOrderId && incomingOrderId === targetOrderId;
+      const isMatchedByOrderCode =
+        incomingOrderCode > 0 &&
+        targetOrderCode > 0 &&
+        incomingOrderCode === targetOrderCode;
+
+      if (!isMatchedByOrderId && !isMatchedByOrderCode) return;
+
+      setPaymentError(null);
+      setPaymentLinkData(null);
+      setIsAwaitingTransferConfirmation(false);
+      setPendingPaymentOrderId("");
+      setPaymentSuccess(true);
+      setShowPaymentModal(true);
+      markTableAvailable();
+    },
+    [activeOrder?.id, markTableAvailable, paymentLinkData?.orderCode, pendingPaymentOrderId],
+  );
+
+  usePaymentSuccessSignalR(handlePaymentSuccessMessage, {
+    enabled:
+      isAuthenticated &&
+      paymentMethod === "bank" &&
+      showPaymentModal &&
+      !!paymentLinkData,
+    subscribeOrderCodes: paymentSignalROrderCodes,
+    requireToken: true,
+  });
 
   /* ─── Copy helper ─── */
   const copyValue = useCallback(async (field: CopyField, value: string) => {
@@ -657,50 +837,120 @@ export default function CashierPOSPage() {
     } catch {}
   }, []);
 
+  const tableAreas = useMemo(() => {
+    const uniqueAreas = new Set(
+      tables
+        .map((table) => table.areaName?.trim())
+        .filter((area): area is string => Boolean(area)),
+    );
+    return Array.from(uniqueAreas).sort((a, b) => a.localeCompare(b, "vi"));
+  }, [tables]);
+
   /* ─── Filtered tables ─── */
   const filteredTables = useMemo(() => {
-    if (tableFilter === "all") return tables;
-    if (tableFilter === "available")
-      return tables.filter((t) => normalizeTableStatus(t.status) === "available");
-    return tables.filter((t) => {
-      const status = normalizeTableStatus(t.status);
-      return status === "occupied" || status === "reserved";
-    });
-  }, [tables, tableFilter]);
+    let statusFilteredTables = tables;
+
+    if (tableFilter === "available") {
+      statusFilteredTables = tables.filter(
+        (t) => normalizeTableStatus(t.status) === "available",
+      );
+    } else if (tableFilter === "occupied") {
+      statusFilteredTables = tables.filter((t) => {
+        const status = normalizeTableStatus(t.status);
+        return status === "occupied" || status === "reserved";
+      });
+    }
+
+    if (selectedAreaName === "all") return statusFilteredTables;
+
+    return statusFilteredTables.filter(
+      (table) => table.areaName?.trim() === selectedAreaName,
+    );
+  }, [selectedAreaName, tableFilter, tables]);
+
+  useEffect(() => {
+    if (selectedAreaName === "all") return;
+    if (tableAreas.includes(selectedAreaName)) return;
+    setSelectedAreaName("all");
+  }, [selectedAreaName, tableAreas]);
 
   /* ─────────────── RENDER ─────────────── */
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="h-screen flex flex-col bg-stone-50 dark:bg-stone-950 overflow-hidden">
+      {checkInNotice && checkInNoticeStyles && (
+        <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-3">
+          <div
+            className={`pointer-events-auto w-full max-w-md rounded-xl border px-4 py-3 shadow-lg backdrop-blur ${checkInNoticeStyles.container}`}
+          >
+            <div className="flex items-start gap-2.5">
+              {checkInNotice.type === "success" ? (
+                <CheckCircle2
+                  className={`mt-0.5 h-4 w-4 flex-shrink-0 ${checkInNoticeStyles.icon}`}
+                />
+              ) : (
+                <AlertCircle
+                  className={`mt-0.5 h-4 w-4 flex-shrink-0 ${checkInNoticeStyles.icon}`}
+                />
+              )}
+              <p className="text-sm font-medium leading-5">{checkInNotice.message}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ── */}
-      <header className="flex-shrink-0 bg-white dark:bg-slate-900 border-b border-border shadow-sm z-20">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/30">
+      <header className="flex-shrink-0 bg-white dark:bg-stone-900 border-b border-border shadow-sm z-20">
+        <div className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-9 h-9 rounded-xl bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
               <UtensilsCrossed className="w-5 h-5 text-white" />
             </div>
+
             <div>
-              <h1 className="text-lg font-bold text-violet-600 leading-tight">
+              <h1 className="text-lg font-bold text-orange-600 leading-tight">
                 POS Thu Ngân
               </h1>
               <p className="text-xs text-muted-foreground leading-tight">
                 Chào, {user?.name ?? "Thu ngân"}
               </p>
             </div>
+
+            <div className="inline-flex items-center rounded-2xl bg-stone-200 dark:bg-stone-800 p-1 ml-1">
+              {ORDER_TYPE_TOGGLE_OPTIONS.map((option) => {
+                const isActive = orderType === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setOrderType(option.value)}
+                    className={`h-10 px-4 sm:px-6 rounded-xl text-sm font-bold tracking-wide transition-all ${
+                      isActive
+                        ? "bg-orange-500 text-white shadow-sm shadow-orange-500/30"
+                        : "text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2 ml-auto">
             <Button
               variant="ghost"
               size="sm"
               onClick={loadTables}
               className="text-muted-foreground"
             >
-              <RefreshCw className="w-4 h-4 mr-1.5" />
-              Làm mới
+              <RefreshCw className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Làm mới</span>
             </Button>
             <Button variant="outline" size="sm" onClick={logout}>
-              <LogOut className="w-4 h-4 mr-1.5" />
-              Đăng xuất
+              <LogOut className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Đăng xuất</span>
             </Button>
           </div>
         </div>
@@ -711,9 +961,9 @@ export default function CashierPOSPage() {
         {/* ════════════════════════════════════════
             COLUMN 1 – Table Map (25%)
         ════════════════════════════════════════ */}
-        <div className="w-[25%] min-w-[220px] flex flex-col border-r border-border bg-white dark:bg-slate-900">
+        <div className="w-[25%] min-w-[220px] flex flex-col border-r border-border bg-white dark:bg-stone-900">
           <div className="px-3 py-3 border-b border-border flex-shrink-0">
-            <h2 className="text-sm font-bold mb-2 text-slate-700 dark:text-slate-200">
+            <h2 className="text-sm font-bold mb-2 text-stone-700 dark:text-stone-200">
               Sơ đồ bàn
             </h2>
             {/* Filter pills */}
@@ -730,20 +980,42 @@ export default function CashierPOSPage() {
                   onClick={() => setTableFilter(f.value)}
                   className={`text-xs px-3 py-1 rounded-full border transition-colors font-medium ${
                     tableFilter === f.value
-                      ? "bg-violet-600 text-white border-violet-600"
-                      : "bg-transparent text-muted-foreground border-border hover:border-violet-400 hover:text-violet-600"
+                      ? "bg-orange-600 text-white border-orange-600"
+                      : "bg-transparent text-muted-foreground border-border hover:border-orange-400 hover:text-orange-600"
                   }`}
                 >
                   {f.label}
                 </button>
               ))}
             </div>
+
+            <div className="mt-2.5 flex items-center gap-2">
+              <label
+                htmlFor="table-area-filter"
+                className="text-xs font-medium text-muted-foreground whitespace-nowrap"
+              >
+                Khu vực
+              </label>
+              <select
+                id="table-area-filter"
+                value={selectedAreaName}
+                onChange={(event) => setSelectedAreaName(event.target.value)}
+                className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs"
+              >
+                <option value="all">Tất cả khu vực</option>
+                {tableAreas.map((areaName) => (
+                  <option key={areaName} value={areaName}>
+                    {areaName}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <ScrollArea className="flex-1">
             {tablesLoading ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-violet-500" />
+                <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
                 <p className="text-xs text-muted-foreground">Đang tải bàn...</p>
               </div>
             ) : tablesError ? (
@@ -822,9 +1094,9 @@ export default function CashierPOSPage() {
         {/* ════════════════════════════════════════
             COLUMN 2 – Menu (50%)
         ════════════════════════════════════════ */}
-        <div className="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-950">
+        <div className="flex-1 flex flex-col min-w-0 bg-stone-50 dark:bg-stone-950">
           {/* Search + categories */}
-          <div className="px-4 py-3 border-b border-border bg-white dark:bg-slate-900 flex-shrink-0">
+          <div className="px-4 py-3 border-b border-border bg-white dark:bg-stone-900 flex-shrink-0">
             <div className="relative mb-2.5">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -839,8 +1111,8 @@ export default function CashierPOSPage() {
                 onClick={() => setSelectedCategory("all")}
                 className={`flex-shrink-0 text-xs px-3 py-1 rounded-full border font-medium transition-colors ${
                   selectedCategory === "all"
-                    ? "bg-violet-600 text-white border-violet-600"
-                    : "bg-transparent text-muted-foreground border-border hover:text-violet-600 hover:border-violet-300"
+                    ? "bg-orange-600 text-white border-orange-600"
+                    : "bg-transparent text-muted-foreground border-border hover:text-orange-600 hover:border-orange-300"
                 }`}
               >
                 Tất cả
@@ -853,8 +1125,8 @@ export default function CashierPOSPage() {
                     onClick={() => setSelectedCategory(cat.name)}
                     className={`flex-shrink-0 text-xs px-3 py-1 rounded-full border font-medium transition-colors ${
                       selectedCategory === cat.name
-                        ? "bg-violet-600 text-white border-violet-600"
-                        : "bg-transparent text-muted-foreground border-border hover:text-violet-600 hover:border-violet-300"
+                        ? "bg-orange-600 text-white border-orange-600"
+                        : "bg-transparent text-muted-foreground border-border hover:text-orange-600 hover:border-orange-300"
                     }`}
                   >
                     {cat.name}
@@ -866,7 +1138,7 @@ export default function CashierPOSPage() {
           <ScrollArea className="flex-1">
             {menuLoading ? (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Loader2 className="w-10 h-10 animate-spin text-violet-500" />
+                <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
                 <p className="text-sm text-muted-foreground">
                   Đang tải thực đơn...
                 </p>
@@ -895,7 +1167,7 @@ export default function CashierPOSPage() {
           </ScrollArea>
 
           {/* Menu pagination — fixed at bottom of menu column */}
-          <div className="flex-shrink-0 border-t border-border py-2 flex items-center justify-center gap-2 bg-white dark:bg-slate-900">
+          <div className="flex-shrink-0 border-t border-border py-2 flex items-center justify-center gap-2 bg-white dark:bg-stone-900">
             <Button
               variant="outline"
               size="icon"
@@ -912,7 +1184,7 @@ export default function CashierPOSPage() {
                   variant={p === menuPage ? "default" : "outline"}
                   size="icon"
                   className={`h-8 w-8 rounded-full ${
-                    p === menuPage ? "bg-violet-600 text-white border-0" : ""
+                    p === menuPage ? "bg-orange-600 text-white border-0" : ""
                   }`}
                   onClick={() => setMenuPage(p)}
                 >
@@ -937,13 +1209,13 @@ export default function CashierPOSPage() {
         {/* ════════════════════════════════════════
             COLUMN 3 – Cart & Checkout (25%)
         ════════════════════════════════════════ */}
-        <div className="w-[26%] min-w-[240px] flex flex-col border-l border-border bg-white dark:bg-slate-900">
+        <div className="w-[26%] min-w-[240px] flex flex-col border-l border-border bg-white dark:bg-stone-900">
           {/* Cart header */}
           <div className="px-4 py-3 border-b border-border flex-shrink-0">
             {selectedTable ? (
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                  <h2 className="text-base font-bold text-stone-800 dark:text-stone-100">
                     Bàn {selectedTable.tableNumber}
                   </h2>
                   <p className="text-xs text-muted-foreground">
@@ -978,12 +1250,12 @@ export default function CashierPOSPage() {
           <ScrollArea className="flex-1 min-h-0">
             {tableDetailLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-violet-500" />
+                <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
               </div>
             ) : !selectedTable ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-violet-50 dark:bg-violet-950/30 flex items-center justify-center mb-3">
-                  <Receipt className="w-7 h-7 text-violet-400" />
+                <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center mb-3">
+                  <Receipt className="w-7 h-7 text-orange-400" />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Chưa chọn bàn
@@ -992,8 +1264,8 @@ export default function CashierPOSPage() {
             ) : cart.length === 0 &&
               (!tableDetail || tableDetail.orders.length === 0) ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-violet-50 dark:bg-violet-950/30 flex items-center justify-center mb-3">
-                  <UtensilsCrossed className="w-7 h-7 text-violet-400" />
+                <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center mb-3">
+                  <UtensilsCrossed className="w-7 h-7 text-orange-400" />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">
                   Chưa có món
@@ -1013,7 +1285,7 @@ export default function CashierPOSPage() {
                 {cart.map((item) => (
                   <div
                     key={item.menuItem.id}
-                    className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-border"
+                    className="flex items-center gap-2 p-2 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-border"
                   >
                     <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-border/50">
                       <Image
@@ -1028,7 +1300,7 @@ export default function CashierPOSPage() {
                       <p className="text-xs font-semibold truncate">
                         {item.menuItem.name}
                       </p>
-                      <p className="text-xs text-violet-600 font-bold">
+                      <p className="text-xs text-orange-600 font-bold">
                         {formatCurrency(item.menuItem.price)}
                       </p>
                     </div>
@@ -1069,7 +1341,7 @@ export default function CashierPOSPage() {
                     return (
                       <div
                         key={item.id || `${item.productId}-${index}`}
-                        className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-border"
+                        className="flex items-center gap-2 p-2 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-border"
                       >
                         <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-border/50 bg-muted flex items-center justify-center">
                           {imageUrl ? (
@@ -1089,14 +1361,14 @@ export default function CashierPOSPage() {
                           <p className="text-xs font-semibold truncate">
                             {item.productName}
                           </p>
-                          <p className="text-xs text-violet-600 font-bold">
+                          <p className="text-xs text-orange-600 font-bold">
                             {formatCurrency(item.unitPrice)}
                           </p>
                         </div>
 
                         <div className="text-right flex-shrink-0">
                           <p className="text-xs font-bold">x{item.quantity}</p>
-                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                          <p className="text-xs font-semibold text-stone-600 dark:text-stone-300">
                             {formatCurrency(item.unitPrice * item.quantity)}
                           </p>
                         </div>
@@ -1118,24 +1390,9 @@ export default function CashierPOSPage() {
                     <span className="ml-1 text-xs">({displayItemCount} món)</span>
                   )}
                 </span>
-                <span className="text-lg font-bold text-violet-600">
+                <span className="text-lg font-bold text-orange-600">
                   {formatCurrency(displayTotal)}
                 </span>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Loại order
-                </label>
-                <select
-                  value={orderType}
-                  onChange={(e) => setOrderType(Number(e.target.value) as ApiOrderType)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value={ApiOrderType.DineIn}>DineIn</option>
-                  <option value={ApiOrderType.TakeAway}>TakeAway</option>
-                  <option value={ApiOrderType.Delivery}>Delivery</option>
-                </select>
               </div>
 
               {saveOrderError && (
@@ -1167,9 +1424,9 @@ export default function CashierPOSPage() {
 
               {/* Checkout */}
               <Button
-                className="w-full bg-violet-600 hover:bg-violet-700 text-white text-sm h-10 font-semibold"
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white text-sm h-10 font-semibold"
                 disabled={!activeOrder && cart.length === 0}
-                onClick={openPaymentModal}
+                onClick={handleCreateBillAndPayment}
               >
                 <Receipt className="w-4 h-4 mr-2" />
                 TẠO HÓA ĐƠN &amp; THANH TOÁN
@@ -1184,7 +1441,7 @@ export default function CashierPOSPage() {
         <DialogContent className="sm:max-w-2xl p-0 gap-0 max-h-[90vh] flex flex-col w-[95vw]">
           <DialogHeader className="px-6 pt-5 pb-4 border-b border-border flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-violet-600" />
+              <Receipt className="w-5 h-5 text-orange-600" />
               {paymentSuccess
                 ? "Thanh toán thành công"
                 : "Tạo hóa đơn & Thanh toán"}
@@ -1232,13 +1489,18 @@ export default function CashierPOSPage() {
 
                   <div className="grid gap-6 md:grid-cols-[260px_minmax(0,1fr)] items-start">
                     {/* QR Code */}
-                    <div className="border rounded-2xl p-3 bg-white w-fit mx-auto flex-shrink-0">
-                      <QRCodeSVG
-                        value={paymentLinkData.qrCode}
-                        size={230}
-                        includeMargin
-                        level="H"
-                      />
+                    <div className="mt-12 border rounded-2xl p-1 bg-white w-[240px] h-[240px] mx-auto flex-shrink-0 flex items-center justify-center">
+                      {paymentQrImageUrl ? (
+                        <Image
+                          src={paymentQrImageUrl}
+                          alt="VietQR thanh toan"
+                          width={230}
+                          height={230}
+                          className="w-[230px] h-[230px] rounded-lg object-contain object-center"
+                        />
+                      ) : (
+                        <div className="w-[230px] h-[230px] rounded-lg bg-muted" />
+                      )}
                     </div>
 
                     {/* Bank info */}
@@ -1265,7 +1527,6 @@ export default function CashierPOSPage() {
                           </p>
                         </div>
                       </div>
-
                       {/* Account name */}
                       <div className="border rounded-xl p-2.5 bg-muted/20">
                         <p className="text-xs text-muted-foreground">
@@ -1386,6 +1647,15 @@ export default function CashierPOSPage() {
                     </div>
                   </div>
 
+                  {isAwaitingTransferConfirmation && (
+                    <div className="rounded-xl border border-orange-200 bg-orange-50/70 px-4 py-3">
+                      <p className="flex items-center gap-2 text-sm font-medium text-orange-700">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Đang chờ xác nhận thanh toán thành công...
+                      </p>
+                    </div>
+                  )}
+
                   {/* Amber note */}
                   <div className="rounded-lg border border-amber-200/55 bg-amber-50/45 px-4 py-2">
                     <p className="text-sm text-amber-800/90 leading-snug">
@@ -1397,21 +1667,24 @@ export default function CashierPOSPage() {
                   <Button
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
                     onClick={handleMarkTransferDone}
+                    disabled={isAwaitingTransferConfirmation}
                   >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Đã nhận chuyển khoản
+                    {isAwaitingTransferConfirmation ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Đang chờ xác nhận...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Đã nhận thanh toán thành công.
+                      </>
+                    )}
                   </Button>
                 </div>
               ) : (
                 /* ── Normal payment form ── */
                 <div className="space-y-5">
-                  {paymentError && (
-                    <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      {paymentError}
-                    </div>
-                  )}
-
                   {/* Order summary */}
                   <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
                     <p className="text-sm font-semibold mb-3">
@@ -1436,7 +1709,7 @@ export default function CashierPOSPage() {
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold text-base">
                       <span>Tổng cộng</span>
-                      <span className="text-violet-600">
+                      <span className="text-orange-600">
                         {formatCurrency(paymentSummaryTotal)}
                       </span>
                     </div>
@@ -1466,8 +1739,8 @@ export default function CashierPOSPage() {
                           onClick={() => setPaymentMethod(opt.value)}
                           className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-left transition-all ${
                             paymentMethod === opt.value
-                              ? "border-violet-500 bg-violet-50 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300"
-                              : "border-border bg-muted/20 text-muted-foreground hover:border-violet-300"
+                              ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300"
+                              : "border-border bg-muted/20 text-muted-foreground hover:border-orange-300"
                           }`}
                         >
                           {opt.icon}
@@ -1524,19 +1797,22 @@ export default function CashierPOSPage() {
 
                   {/* Confirm button */}
                   <Button
-                    className="w-full bg-violet-600 hover:bg-violet-700 text-white rounded-xl h-11 text-base font-semibold"
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl h-11 text-base font-semibold"
                     onClick={handleConfirmPayment}
                     disabled={
+                      isCheckingPaymentInfo ||
                       isCreatingBill ||
                       isCreatingLink ||
                       (paymentMethod === "cash" && cashChange < 0) ||
                       !activeOrder
                     }
                   >
-                    {isCreatingBill || isCreatingLink ? (
+                    {isCheckingPaymentInfo || isCreatingBill || isCreatingLink ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {isCreatingBill
+                        {isCheckingPaymentInfo
+                          ? "Đang kiểm tra thanh toán..."
+                          : isCreatingBill
                           ? "Đang tạo hóa đơn..."
                           : "Đang tạo mã QR..."}
                       </>
@@ -1566,9 +1842,9 @@ function MenuCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
   return (
     <button
       onClick={onAdd}
-      className="group text-left rounded-xl border border-border bg-white dark:bg-slate-900 overflow-hidden hover:border-violet-400 hover:shadow-lg hover:shadow-violet-100/50 dark:hover:shadow-violet-900/30 transition-all hover:scale-[1.02] active:scale-[0.97]"
+      className="group text-left rounded-xl border border-border bg-white dark:bg-stone-900 overflow-hidden hover:border-orange-400 hover:shadow-lg hover:shadow-orange-100/50 dark:hover:shadow-orange-900/30 transition-all hover:scale-[1.02] active:scale-[0.97]"
     >
-      <div className="h-40 overflow-hidden bg-slate-100 dark:bg-slate-800 relative">
+      <div className="h-40 overflow-hidden bg-stone-100 dark:bg-stone-800 relative">
         <Image
           src={item.image}
           alt={item.name}
@@ -1577,15 +1853,15 @@ function MenuCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        <div className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 shadow-md">
+        <div className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-orange-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 shadow-md">
           <Plus className="w-4 h-4 text-white" />
         </div>
       </div>
       <div className="p-3">
-        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-tight line-clamp-2 mb-1">
+        <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 leading-tight line-clamp-2 mb-1">
           {item.name}
         </p>
-        <p className="text-sm font-bold text-violet-600">
+        <p className="text-sm font-bold text-orange-600">
           {formatCurrency(item.price)}
         </p>
       </div>
@@ -1605,8 +1881,8 @@ function Chair({
   const base = "rounded flex-shrink-0 transition-colors";
   const size = horizontal ? "w-6 h-3.5" : "w-3.5 h-6";
   const color = occupied
-    ? "bg-violet-500 dark:bg-violet-500"
-    : "bg-slate-200 dark:bg-slate-600";
+    ? "bg-orange-500 dark:bg-orange-500"
+    : "bg-stone-200 dark:bg-stone-600";
   return <div className={`${base} ${size} ${color}`} />;
 }
 
@@ -1632,20 +1908,20 @@ function TableFloorPlan({
 
   // Table surface colors
   const tableBg = isOccupied
-    ? "bg-violet-600 border-violet-700 shadow-lg shadow-violet-400/30"
+    ? "bg-orange-600 border-orange-700 shadow-lg shadow-orange-400/30"
     : isReserved
-      ? "bg-blue-500 border-blue-600 shadow-lg shadow-blue-400/30"
-      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600";
+      ? "bg-amber-500 border-amber-600 shadow-lg shadow-amber-400/30"
+      : "bg-white dark:bg-stone-800 border-stone-200 dark:border-stone-600";
 
   const tableText =
     isOccupied || isReserved
       ? "text-white font-bold"
-      : "text-slate-700 dark:text-slate-200 font-bold";
+      : "text-stone-700 dark:text-stone-200 font-bold";
 
   const capacityText =
     isOccupied || isReserved
       ? "text-white/70"
-      : "text-slate-400 dark:text-slate-500";
+      : "text-stone-400 dark:text-stone-500";
 
   return (
     <div className="flex flex-col items-center gap-0.5 select-none transition-all">
@@ -1668,7 +1944,7 @@ function TableFloorPlan({
         <div
           className={`w-16 h-16 rounded-2xl border-2 flex flex-col items-center justify-center transition-colors ${
             tableBg
-          } ${isSelected ? "ring-[3px] ring-violet-400" : ""}`}
+          } ${isSelected ? "ring-[3px] ring-orange-400" : ""}`}
         >
           <span className={`text-base leading-tight ${tableText}`}>
             {tableNumber}

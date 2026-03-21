@@ -33,10 +33,10 @@ export function Navbar() {
         >
             <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-2">
-                    <div className="w-10 h-10 rounded-xl bg-violet-500 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center">
                         <span className="text-white font-bold text-lg">S</span>
                     </div>
-                    <span className="text-xl font-bold text-violet-600">
+                    <span className="text-xl font-bold text-orange-600">
                         Studio
                     </span>
                 </Link>
@@ -117,7 +117,7 @@ export function Navbar() {
                     <Button variant="ghost" className="hidden sm:inline-flex">
                         Sign In
                     </Button>
-                    <Button className="bg-violet-600 hover:bg-violet-700 text-white border-0">
+                    <Button className="bg-orange-600 hover:bg-orange-700 text-white border-0">
                         Get Started
                     </Button>
                 </div>

@@ -149,7 +149,7 @@ export default function OrderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-violet-50/50 dark:bg-violet-950/20">
+    <div className="min-h-screen bg-orange-50/50 dark:bg-orange-950/20">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -175,7 +175,7 @@ export default function OrderPage() {
               </Button>
               <div>
                 <h1 className="text-2xl font-bold">
-                  <span className="text-violet-600">
+                  <span className="text-orange-600">
                     Restaurant Menu
                   </span>
                 </h1>
@@ -218,7 +218,7 @@ export default function OrderPage() {
             {/* Loading State */}
             {isLoading && (
               <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 className="h-12 w-12 animate-spin text-violet-600 mb-4" />
+                <Loader2 className="h-12 w-12 animate-spin text-orange-600 mb-4" />
                 <p className="text-muted-foreground">Đang tải menu...</p>
               </div>
             )}
@@ -260,7 +260,7 @@ export default function OrderPage() {
                     <TabsTrigger
                       key={category.value}
                       value={category.value}
-                      className="data-[state=active]:bg-violet-600 data-[state=active]:text-white rounded-full px-4 shrink-0"
+                      className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-full px-4 shrink-0"
                     >
                       {category.label}
                     </TabsTrigger>
@@ -306,7 +306,7 @@ export default function OrderPage() {
                           disabled={isLoading}
                           className={`h-9 w-9 p-0 ${
                             page === pageIndex
-                              ? "bg-violet-600 text-white border-0 hover:bg-violet-700"
+                              ? "bg-orange-600 text-white border-0 hover:bg-orange-700"
                               : ""
                           }`}
                         >

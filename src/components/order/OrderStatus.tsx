@@ -37,7 +37,7 @@ const statusConfig: Record<
     },
     cooking: {
         label: "Cooking",
-        color: "bg-blue-500",
+        color: "bg-amber-500",
         icon: (
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -79,7 +79,7 @@ const statusConfig: Record<
     },
     served: {
         label: "Served",
-        color: "bg-purple-500",
+        color: "bg-orange-500",
         icon: (
             <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -159,7 +159,7 @@ export function OrderStatusDisplay({ order }: OrderStatusDisplayProps) {
                                         className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all ${isActive
                                                 ? statusConfig[status].color
                                                 : "bg-muted text-muted-foreground"
-                                            } ${isCurrent ? "ring-4 ring-offset-2 ring-violet-500/30" : ""}`}
+                                            } ${isCurrent ? "ring-4 ring-offset-2 ring-orange-500/30" : ""}`}
                                     >
                                         {statusConfig[status].icon}
                                     </div>
@@ -176,7 +176,7 @@ export function OrderStatusDisplay({ order }: OrderStatusDisplayProps) {
                     {/* Progress line */}
                     <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted -z-0">
                         <div
-                            className="h-full bg-violet-500 transition-all duration-500"
+                            className="h-full bg-orange-500 transition-all duration-500"
                             style={{
                                 width: `${(currentStepIndex / (statusSteps.length - 1)) * 100}%`,
                             }}
@@ -202,7 +202,7 @@ export function OrderStatusDisplay({ order }: OrderStatusDisplayProps) {
                     ))}
                     <div className="flex justify-between font-semibold pt-2 border-t">
                         <span>Total</span>
-                        <span className="text-violet-600 dark:text-violet-400">
+                        <span className="text-orange-600 dark:text-orange-400">
                             {formatCurrency(order.totalAmount)}
                         </span>
                     </div>

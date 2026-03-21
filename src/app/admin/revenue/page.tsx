@@ -38,7 +38,7 @@ export default function RevenuePage() {
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold">
-                    <span className="text-violet-600">
+                    <span className="text-orange-600">
                         Revenue Analytics
                     </span>
                 </h1>
@@ -65,7 +65,7 @@ export default function RevenuePage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold text-violet-600 dark:text-violet-400">
+                                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
                                     {formatCurrency(totalRevenue)}
                                 </div>
                             </CardContent>
@@ -78,7 +78,7 @@ export default function RevenuePage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                                <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
                                     {totalOrders}
                                 </div>
                             </CardContent>
@@ -122,7 +122,7 @@ export default function RevenuePage() {
                                             </div>
                                             <div className="h-3 bg-muted rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-violet-500 rounded-full transition-all duration-500"
+                                                    className="h-full bg-orange-500 rounded-full transition-all duration-500"
                                                     style={{ width: `${percentage}%` }}
                                                 />
                                             </div>
@@ -171,7 +171,7 @@ export default function RevenuePage() {
                                                     })}
                                                 </td>
                                                 <td className="text-right py-3 px-4">{data.orders}</td>
-                                                <td className="text-right py-3 px-4 font-medium text-violet-600 dark:text-violet-400">
+                                                <td className="text-right py-3 px-4 font-medium text-orange-600 dark:text-orange-400">
                                                     {formatCurrency(data.revenue)}
                                                 </td>
                                                 <td className="text-right py-3 px-4">

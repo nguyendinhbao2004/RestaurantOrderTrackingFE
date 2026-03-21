@@ -47,11 +47,18 @@ export const API_ENDPOINTS = {
     // ==================== PAYMENTS ====================
     payments: {
         createLink: `${API_BASE_URL}/api/Payment/create-link`,
+        paymentInfo: (orderId: string) => `${API_BASE_URL}/api/Payment/payment-info/${orderId}`,
     },
 
     // ==================== CASHIER ====================
     cashier: {
         createBill: `${API_BASE_URL}/api/Cashier/bill`,
+        payBill: `${API_BASE_URL}/api/Cashier/bill/pay`,
+    },
+
+    // ==================== WORK SCHEDULE ====================
+    workSchedule: {
+        checkIn: (accountId: string) => `${API_BASE_URL}/api/WorkSchedule/CheckIn/${accountId}`,
     },
 
     // ==================== TABLES ====================

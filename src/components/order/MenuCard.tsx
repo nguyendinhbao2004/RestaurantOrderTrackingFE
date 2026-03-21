@@ -16,7 +16,7 @@ export function MenuCard({ item }: MenuCardProps) {
   const { addToCart } = useOrder();
 
   return (
-    <Card className="group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm hover:border-violet-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-violet-500/5 flex flex-col">
+    <Card className="group overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm hover:border-orange-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/5 flex flex-col">
       <div className="relative aspect-[4/3] overflow-hidden flex-shrink-0">
         <Image
           src={item.image}
@@ -51,7 +51,7 @@ export function MenuCard({ item }: MenuCardProps) {
           </div>
         )}
         <div className="absolute top-2 right-2">
-          <Badge className="bg-violet-600 hover:bg-violet-700 text-white">
+          <Badge className="bg-orange-600 hover:bg-orange-700 text-white">
             {item.preparationTime} min
           </Badge>
         </div>
@@ -59,7 +59,7 @@ export function MenuCard({ item }: MenuCardProps) {
       <CardContent className="p-4 flex flex-col flex-1">
         <div className="flex justify-between items-start mb-2">
           <h3 className="font-semibold text-lg leading-tight">{item.name}</h3>
-          <span className="text-lg font-bold text-violet-600 dark:text-violet-400">
+          <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
             {formatCurrency(item.price)}
           </span>
         </div>
@@ -69,7 +69,7 @@ export function MenuCard({ item }: MenuCardProps) {
         <Button
           onClick={() => addToCart(item)}
           disabled={!item.isAvailable}
-          className="w-full mt-auto bg-violet-600 hover:bg-violet-700 text-white disabled:bg-gray-400"
+          className="w-full mt-auto bg-orange-600 hover:bg-orange-700 text-white disabled:bg-stone-400"
         >
           {item.isAvailable ? (
             <>
