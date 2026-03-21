@@ -85,7 +85,7 @@ const testimonials = [
 
 const NAV_LINKS = [
   { label: "Menu", href: "#menu" },
-  { label: "Order Online", href: "/customer" },
+  { label: "Order Online", href: "/menu" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "Reviews", href: "#reviews" },
 ];

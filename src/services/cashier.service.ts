@@ -13,6 +13,36 @@ export interface CreateBillRequest {
   discount: number;
 }
 
+export interface PaymentMetadata {
+  bin: string;
+  accountNumber: string;
+  accountName: string;
+  description: string;
+  qrCode: string;
+}
+
+export interface PaymentInfoByOrderData {
+  billId: string;
+  orderCode: number;
+  amount: number;
+  status: string;
+  paymentMetadata: PaymentMetadata | null;
+}
+
+export interface PayBillRequest {
+  billId: string;
+}
+
 export async function createBill(payload: CreateBillRequest) {
   return httpClient.post<string>(API_ENDPOINTS.cashier.createBill, payload);
+}
+
+export async function getPaymentInfoByOrderId(orderId: string) {
+  return httpClient.get<PaymentInfoByOrderData>(
+    API_ENDPOINTS.payments.paymentInfo(orderId),
+  );
+}
+
+export async function payBill(payload: PayBillRequest) {
+  return httpClient.put<unknown>(API_ENDPOINTS.cashier.payBill, payload);
 }

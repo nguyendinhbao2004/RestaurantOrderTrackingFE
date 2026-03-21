@@ -16,7 +16,7 @@ import { useBanks } from "@/contexts/BanksContext";
 import { fetchTables } from "@/services/table.service";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
-import { createBill } from "@/services/cashier.service";
+import { createBill, getPaymentInfoByOrderId, payBill, PaymentInfoByOrderData,} from "@/services/cashier.service";
 import { ApiOrderType, createOrder, createOrderItems, resolveOrderId, updateOrderStatus,} from "@/services/order.service";
 import { buildVietQrImageUrl, createPaymentLink, PaymentLinkData,} from "@/services/online-order.service";
 import { CashierCheckInNotice, consumeCashierCheckInNotice,} from "@/services/work-schedule.service";
@@ -70,6 +70,10 @@ type CopyField = "accountNumber" | "amount" | "description";
 const TABLE_PAGE_SIZE = 8;
 const MENU_PAGE_SIZE = 6;
 const DEFAULT_PAYMENT_ORDER_STATUS = 4;
+const ORDER_TYPE_TOGGLE_OPTIONS = [
+  { value: ApiOrderType.DineIn, label: "TẠI CHỖ" },
+  { value: ApiOrderType.TakeAway, label: "MANG VỀ" },
+] as const;
 
 /* ─────────────────────── Helpers ─────────────────────── */
 
@@ -281,6 +285,7 @@ export default function CashierPOSPage() {
   const [tableFilter, setTableFilter] = useState<
     "all" | "available" | "occupied"
   >("all");
+  const [selectedAreaName, setSelectedAreaName] = useState("all");
   const [tablePage, setTablePage] = useState(1);
   const [tableTotalPages, setTableTotalPages] = useState(1);
 
@@ -307,17 +312,17 @@ export default function CashierPOSPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [cashGiven, setCashGiven] = useState("");
+  const [isCheckingPaymentInfo, setIsCheckingPaymentInfo] = useState(false);
   const [isCreatingBill, setIsCreatingBill] = useState(false);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [billId, setBillId] = useState("");
-  const [paymentLinkData, setPaymentLinkData] =
-    useState<PaymentLinkData | null>(null);
+  const [paymentLinkData, setPaymentLinkData] = useState<PaymentLinkData | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [isAwaitingTransferConfirmation, setIsAwaitingTransferConfirmation] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [pendingPaymentOrderId, setPendingPaymentOrderId] = useState("");
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
-  const [checkInNotice, setCheckInNotice] =
-    useState<CashierCheckInNotice | null>(null);
+  const [checkInNotice, setCheckInNotice] = useState<CashierCheckInNotice | null>(null);
 
   /* ── Derived ── */
   const selectedBank = useMemo(() => {
@@ -627,60 +632,53 @@ export default function CashierPOSPage() {
   const openPaymentModal = useCallback(() => {
     setPaymentMethod("cash");
     setCashGiven("");
+    setIsCheckingPaymentInfo(false);
     setBillId("");
     setPaymentLinkData(null);
     setPaymentSuccess(false);
+    setIsAwaitingTransferConfirmation(false);
     setPaymentError(null);
     setPendingPaymentOrderId("");
     setCopiedField(null);
     setShowPaymentModal(true);
   }, []);
 
-  /* ─── Create bill + handle payment ─── */
-  const handleConfirmPayment = useCallback(async () => {
-    if (!activeOrder || !user) return;
-    setIsCreatingBill(true);
-    setPaymentError(null);
+  const preparePaymentFlow = useCallback(async (orderId: string) => {
+    const paymentInfoRes = await getPaymentInfoByOrderId(orderId);
+    const paymentInfoData: PaymentInfoByOrderData = paymentInfoRes.data;
+    const currentBillId = paymentInfoData.billId?.trim() || "";
 
-    try {
+    setPendingPaymentOrderId(orderId);
+    setBillId(currentBillId);
+
+    if (!paymentInfoData.paymentMetadata) {
       await updateOrderStatus({
-        id: activeOrder.id,
+        id: orderId,
         newStatus: DEFAULT_PAYMENT_ORDER_STATUS,
       });
+    }
+  }, []);
 
-      const apiPaymentMethod = paymentMethod === "cash" ? 1 : 3;
-      const billRes = await createBill({
-        orderId: activeOrder.id,
-        cashierAccountId: user.id,
-        paymentMethod: apiPaymentMethod,
-        discount: 0,
-      });
+  const handleCreateBillAndPayment = useCallback(async () => {
+    openPaymentModal();
+    if (!activeOrder) return;
 
-      const newBillId = billRes.data as string;
-      setBillId(newBillId);
+    setPaymentError(null);
+    setIsCheckingPaymentInfo(true);
 
-      if (paymentMethod === "cash") {
-        // Cash: done immediately
-        setPendingPaymentOrderId("");
-        setPaymentSuccess(true);
-        markTableAvailable();
-      } else {
-        // Bank transfer: create payment link for QR
-        setPendingPaymentOrderId(activeOrder.id);
-        setIsCreatingBill(false);
-        setIsCreatingLink(true);
-        const linkRes = await createPaymentLink({ billId: newBillId });
-        setPaymentLinkData(linkRes.data);
-      }
-    } catch (err: any) {
+    try {
+      await preparePaymentFlow(activeOrder.id);
+    } catch (error) {
       setPaymentError(
-        err?.message || "Không thể tạo hóa đơn. Vui lòng thử lại.",
+        getApiErrorMessage(
+          error,
+          "Không thể kiểm tra thông tin thanh toán. Vui lòng thử lại.",
+        ),
       );
     } finally {
-      setIsCreatingBill(false);
-      setIsCreatingLink(false);
+      setIsCheckingPaymentInfo(false);
     }
-  }, [activeOrder, user, paymentMethod]);
+  }, [activeOrder, openPaymentModal, preparePaymentFlow]);
 
   const markTableAvailable = useCallback(() => {
     if (!selectedTable) return;
@@ -694,38 +692,141 @@ export default function CashierPOSPage() {
     setSelectedTable(null);
   }, [selectedTable]);
 
+  /* ─── Create bill + handle payment ─── */
+  const handleConfirmPayment = useCallback(async () => {
+    if (!activeOrder || !user || isCheckingPaymentInfo) return;
+
+    const orderId = activeOrder.id;
+    const isBankPayment = paymentMethod === "bank";
+
+    setPaymentError(null);
+    setIsAwaitingTransferConfirmation(false);
+    setPaymentSuccess(false);
+
+    if (isBankPayment) {
+      setIsCreatingLink(true);
+    } else {
+      setIsCreatingBill(true);
+    }
+
+    try {
+      let nextBillId = billId.trim();
+      if (!nextBillId) {
+        await updateOrderStatus({
+          id: orderId,
+          newStatus: DEFAULT_PAYMENT_ORDER_STATUS,
+        });
+
+        const billRes = await createBill({
+          orderId,
+          cashierAccountId: user.id,
+          paymentMethod: isBankPayment ? 3 : 1,
+          discount: 0,
+        });
+
+        nextBillId = String(billRes.data ?? "").trim();
+      }
+
+      if (!nextBillId) {
+        throw new Error("Không lấy được billId để tiếp tục thanh toán.");
+      }
+
+      setBillId(nextBillId);
+
+      if (isBankPayment) {
+        const linkRes = await createPaymentLink({ billId: nextBillId });
+        setPendingPaymentOrderId(orderId);
+        setPaymentLinkData(linkRes.data);
+        return;
+      }
+
+      await payBill({ billId: nextBillId });
+
+      setPendingPaymentOrderId("");
+      setPaymentLinkData(null);
+      setIsAwaitingTransferConfirmation(false);
+      setPaymentSuccess(true);
+      markTableAvailable();
+    } catch (error) {
+      setPaymentError(
+        getApiErrorMessage(
+          error,
+          isBankPayment
+            ? "Không thể tạo mã chuyển khoản. Vui lòng thử lại."
+            : "Không thể thanh toán hóa đơn. Vui lòng thử lại.",
+        ),
+      );
+    } finally {
+      setIsCreatingBill(false);
+      setIsCreatingLink(false);
+    }
+  }, [activeOrder, billId, isCheckingPaymentInfo, markTableAvailable, paymentMethod, user]);
+
   const handleMarkTransferDone = useCallback(() => {
-    setPendingPaymentOrderId("");
-    setPaymentSuccess(true);
-    markTableAvailable();
-  }, [markTableAvailable]);
+    if (!pendingPaymentOrderId && !activeOrder?.id) {
+      return;
+    }
+
+    setPaymentError(null);
+    setIsAwaitingTransferConfirmation(true);
+  }, [activeOrder?.id, pendingPaymentOrderId]);
 
   const handleClosePaymentModal = useCallback(() => {
     setShowPaymentModal(false);
-    if (paymentSuccess) {
-      // already cleared in markTableAvailable
+  }, []);
+
+  const paymentSignalROrderCodes = useMemo(() => {
+    const orderCode = paymentLinkData?.orderCode;
+    if (!Number.isFinite(orderCode) || !orderCode || orderCode <= 0) {
+      return [];
     }
-  }, [paymentSuccess]);
+
+    return [Math.trunc(orderCode)];
+  }, [paymentLinkData?.orderCode]);
 
   const handlePaymentSuccessMessage = useCallback(
     (message: PaymentMessage) => {
       const incomingOrderId = message.orderId.trim();
-      if (!incomingOrderId) return;
+      const incomingOrderCode =
+        Number.isFinite(message.orderCode) && message.orderCode > 0
+          ? Math.trunc(message.orderCode)
+          : 0;
 
       const targetOrderId = (pendingPaymentOrderId || activeOrder?.id || "").trim();
-      if (!targetOrderId || incomingOrderId !== targetOrderId) return;
+      const targetOrderCode =
+        paymentLinkData?.orderCode && paymentLinkData.orderCode > 0
+          ? Math.trunc(paymentLinkData.orderCode)
+          : 0;
+
+      const isMatchedByOrderId =
+        !!incomingOrderId && !!targetOrderId && incomingOrderId === targetOrderId;
+      const isMatchedByOrderCode =
+        incomingOrderCode > 0 &&
+        targetOrderCode > 0 &&
+        incomingOrderCode === targetOrderCode;
+
+      if (!isMatchedByOrderId && !isMatchedByOrderCode) return;
 
       setPaymentError(null);
       setPaymentLinkData(null);
+      setIsAwaitingTransferConfirmation(false);
       setPendingPaymentOrderId("");
       setPaymentSuccess(true);
       setShowPaymentModal(true);
       markTableAvailable();
     },
-    [activeOrder?.id, markTableAvailable, pendingPaymentOrderId],
+    [activeOrder?.id, markTableAvailable, paymentLinkData?.orderCode, pendingPaymentOrderId],
   );
 
-  usePaymentSuccessSignalR(handlePaymentSuccessMessage, isAuthenticated);
+  usePaymentSuccessSignalR(handlePaymentSuccessMessage, {
+    enabled:
+      isAuthenticated &&
+      paymentMethod === "bank" &&
+      showPaymentModal &&
+      !!paymentLinkData,
+    subscribeOrderCodes: paymentSignalROrderCodes,
+    requireToken: true,
+  });
 
   /* ─── Copy helper ─── */
   const copyValue = useCallback(async (field: CopyField, value: string) => {
@@ -736,16 +837,42 @@ export default function CashierPOSPage() {
     } catch {}
   }, []);
 
+  const tableAreas = useMemo(() => {
+    const uniqueAreas = new Set(
+      tables
+        .map((table) => table.areaName?.trim())
+        .filter((area): area is string => Boolean(area)),
+    );
+    return Array.from(uniqueAreas).sort((a, b) => a.localeCompare(b, "vi"));
+  }, [tables]);
+
   /* ─── Filtered tables ─── */
   const filteredTables = useMemo(() => {
-    if (tableFilter === "all") return tables;
-    if (tableFilter === "available")
-      return tables.filter((t) => normalizeTableStatus(t.status) === "available");
-    return tables.filter((t) => {
-      const status = normalizeTableStatus(t.status);
-      return status === "occupied" || status === "reserved";
-    });
-  }, [tables, tableFilter]);
+    let statusFilteredTables = tables;
+
+    if (tableFilter === "available") {
+      statusFilteredTables = tables.filter(
+        (t) => normalizeTableStatus(t.status) === "available",
+      );
+    } else if (tableFilter === "occupied") {
+      statusFilteredTables = tables.filter((t) => {
+        const status = normalizeTableStatus(t.status);
+        return status === "occupied" || status === "reserved";
+      });
+    }
+
+    if (selectedAreaName === "all") return statusFilteredTables;
+
+    return statusFilteredTables.filter(
+      (table) => table.areaName?.trim() === selectedAreaName,
+    );
+  }, [selectedAreaName, tableFilter, tables]);
+
+  useEffect(() => {
+    if (selectedAreaName === "all") return;
+    if (tableAreas.includes(selectedAreaName)) return;
+    setSelectedAreaName("all");
+  }, [selectedAreaName, tableAreas]);
 
   /* ─────────────── RENDER ─────────────── */
 
@@ -774,11 +901,12 @@ export default function CashierPOSPage() {
 
       {/* ── Header ── */}
       <header className="flex-shrink-0 bg-white dark:bg-stone-900 border-b border-border shadow-sm z-20">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-9 h-9 rounded-xl bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
               <UtensilsCrossed className="w-5 h-5 text-white" />
             </div>
+
             <div>
               <h1 className="text-lg font-bold text-orange-600 leading-tight">
                 POS Thu Ngân
@@ -787,20 +915,42 @@ export default function CashierPOSPage() {
                 Chào, {user?.name ?? "Thu ngân"}
               </p>
             </div>
+
+            <div className="inline-flex items-center rounded-2xl bg-stone-200 dark:bg-stone-800 p-1 ml-1">
+              {ORDER_TYPE_TOGGLE_OPTIONS.map((option) => {
+                const isActive = orderType === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setOrderType(option.value)}
+                    className={`h-10 px-4 sm:px-6 rounded-xl text-sm font-bold tracking-wide transition-all ${
+                      isActive
+                        ? "bg-orange-500 text-white shadow-sm shadow-orange-500/30"
+                        : "text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center gap-2 ml-auto">
             <Button
               variant="ghost"
               size="sm"
               onClick={loadTables}
               className="text-muted-foreground"
             >
-              <RefreshCw className="w-4 h-4 mr-1.5" />
-              Làm mới
+              <RefreshCw className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Làm mới</span>
             </Button>
             <Button variant="outline" size="sm" onClick={logout}>
-              <LogOut className="w-4 h-4 mr-1.5" />
-              Đăng xuất
+              <LogOut className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Đăng xuất</span>
             </Button>
           </div>
         </div>
@@ -837,6 +987,28 @@ export default function CashierPOSPage() {
                   {f.label}
                 </button>
               ))}
+            </div>
+
+            <div className="mt-2.5 flex items-center gap-2">
+              <label
+                htmlFor="table-area-filter"
+                className="text-xs font-medium text-muted-foreground whitespace-nowrap"
+              >
+                Khu vực
+              </label>
+              <select
+                id="table-area-filter"
+                value={selectedAreaName}
+                onChange={(event) => setSelectedAreaName(event.target.value)}
+                className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs"
+              >
+                <option value="all">Tất cả khu vực</option>
+                {tableAreas.map((areaName) => (
+                  <option key={areaName} value={areaName}>
+                    {areaName}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -1223,21 +1395,6 @@ export default function CashierPOSPage() {
                 </span>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Loại order
-                </label>
-                <select
-                  value={orderType}
-                  onChange={(e) => setOrderType(Number(e.target.value) as ApiOrderType)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value={ApiOrderType.DineIn}>DineIn</option>
-                  <option value={ApiOrderType.TakeAway}>TakeAway</option>
-                  <option value={ApiOrderType.Delivery}>Delivery</option>
-                </select>
-              </div>
-
               {saveOrderError && (
                 <div className="rounded-md border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-xs text-destructive">
                   {saveOrderError}
@@ -1269,7 +1426,7 @@ export default function CashierPOSPage() {
               <Button
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white text-sm h-10 font-semibold"
                 disabled={!activeOrder && cart.length === 0}
-                onClick={openPaymentModal}
+                onClick={handleCreateBillAndPayment}
               >
                 <Receipt className="w-4 h-4 mr-2" />
                 TẠO HÓA ĐƠN &amp; THANH TOÁN
@@ -1332,7 +1489,7 @@ export default function CashierPOSPage() {
 
                   <div className="grid gap-6 md:grid-cols-[260px_minmax(0,1fr)] items-start">
                     {/* QR Code */}
-                    <div className="border rounded-2xl p-1 bg-white w-[240px] h-[240px] mx-auto flex-shrink-0 flex items-center justify-center">
+                    <div className="mt-12 border rounded-2xl p-1 bg-white w-[240px] h-[240px] mx-auto flex-shrink-0 flex items-center justify-center">
                       {paymentQrImageUrl ? (
                         <Image
                           src={paymentQrImageUrl}
@@ -1370,7 +1527,6 @@ export default function CashierPOSPage() {
                           </p>
                         </div>
                       </div>
-
                       {/* Account name */}
                       <div className="border rounded-xl p-2.5 bg-muted/20">
                         <p className="text-xs text-muted-foreground">
@@ -1491,6 +1647,15 @@ export default function CashierPOSPage() {
                     </div>
                   </div>
 
+                  {isAwaitingTransferConfirmation && (
+                    <div className="rounded-xl border border-orange-200 bg-orange-50/70 px-4 py-3">
+                      <p className="flex items-center gap-2 text-sm font-medium text-orange-700">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Đang chờ xác nhận thanh toán thành công...
+                      </p>
+                    </div>
+                  )}
+
                   {/* Amber note */}
                   <div className="rounded-lg border border-amber-200/55 bg-amber-50/45 px-4 py-2">
                     <p className="text-sm text-amber-800/90 leading-snug">
@@ -1502,21 +1667,24 @@ export default function CashierPOSPage() {
                   <Button
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl"
                     onClick={handleMarkTransferDone}
+                    disabled={isAwaitingTransferConfirmation}
                   >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Đã nhận chuyển khoản
+                    {isAwaitingTransferConfirmation ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Đang chờ xác nhận...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Đã nhận thanh toán thành công.
+                      </>
+                    )}
                   </Button>
                 </div>
               ) : (
                 /* ── Normal payment form ── */
                 <div className="space-y-5">
-                  {paymentError && (
-                    <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      {paymentError}
-                    </div>
-                  )}
-
                   {/* Order summary */}
                   <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-2">
                     <p className="text-sm font-semibold mb-3">
@@ -1632,16 +1800,19 @@ export default function CashierPOSPage() {
                     className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl h-11 text-base font-semibold"
                     onClick={handleConfirmPayment}
                     disabled={
+                      isCheckingPaymentInfo ||
                       isCreatingBill ||
                       isCreatingLink ||
                       (paymentMethod === "cash" && cashChange < 0) ||
                       !activeOrder
                     }
                   >
-                    {isCreatingBill || isCreatingLink ? (
+                    {isCheckingPaymentInfo || isCreatingBill || isCreatingLink ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        {isCreatingBill
+                        {isCheckingPaymentInfo
+                          ? "Đang kiểm tra thanh toán..."
+                          : isCreatingBill
                           ? "Đang tạo hóa đơn..."
                           : "Đang tạo mã QR..."}
                       </>

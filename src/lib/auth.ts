@@ -95,7 +95,7 @@ export const roleRedirectPaths: Record<Role, string> = {
     chef: '/chef',
     waiter: '/waiter',
     cashier: '/cashier',
-    customer: '/customer',
+    customer: '/menu',
 };
 
 export const protectedRoutes: Record<string, Role[]> = {
@@ -106,16 +106,14 @@ export const protectedRoutes: Record<string, Role[]> = {
     '/waiter': ['waiter'],
     '/cashier': ['cashier'],
     '/tables': ['admin', 'waiter', 'cashier'],
-    '/customer': ['customer'],
 };
 
-export const publicRoutes = ['/', '/login', '/order', '/customer', '/menu'];
+export const publicRoutes = ['/', '/login', '/order', '/menu'];
 
 export function isPublicRoute(pathname: string): boolean {
     return publicRoutes.some(route =>
         pathname === route || 
         pathname.startsWith('/order') || 
-        pathname.startsWith('/customer') || 
         pathname.startsWith('/menu')
     );
 }

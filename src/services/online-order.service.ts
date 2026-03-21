@@ -24,6 +24,7 @@ export interface CreateOnlineOrderRequest {
 
 export interface OnlineOrderData {
   orderId: string;
+  orderCode?: number;
   billId: string;
   paymentMethod: number;
 }
