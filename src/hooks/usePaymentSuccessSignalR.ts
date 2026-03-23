@@ -7,6 +7,7 @@ import {
   LogLevel,
 } from "@microsoft/signalr";
 import { getToken } from "@/lib/auth";
+import { API_BASE_URL } from "@/lib/api-config";
 
 type RawPaymentMessage = {
   OrderId?: string;
@@ -86,7 +87,7 @@ export function usePaymentSuccessSignalR(
   }, [onMessage]);
 
   useEffect(() => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+    const baseUrl = API_BASE_URL;
     if (!enabled || !baseUrl || typeof window === "undefined") return;
 
     const orderCodesToSubscribe = orderCodeSubscriptionKey
