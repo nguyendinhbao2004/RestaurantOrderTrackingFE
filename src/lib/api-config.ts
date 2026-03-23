@@ -4,8 +4,10 @@
  */
 
 // Base URL — reads from env, falls back to default
-export const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "https://localhost:7260";
+const RAW_API_BASE_URL =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "https://gjrl0zn6-7260.asse.devtunnels.ms";
+
+export const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");;
 
 // ==================== AUTH ====================
 export const API_ENDPOINTS = {
