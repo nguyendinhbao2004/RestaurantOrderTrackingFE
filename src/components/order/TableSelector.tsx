@@ -12,22 +12,34 @@ import { useTable } from "@/contexts/TableContext";
 import { useOrder } from "@/contexts/OrderContext";
 import { Loader2 } from "lucide-react";
 
-export function TableSelector({ disabled }: { disabled?: boolean }) {
+interface TableSelectorProps {
+  disabled?: boolean;
+  lockedTableLabel?: string | null;
+}
+
+export function TableSelector({ disabled, lockedTableLabel }: TableSelectorProps) {
   const { tables, isLoading } = useTable();
   const { selectedTable, setSelectedTable } = useOrder();
+  const selectedTableInfo = tables.find((table) => table.id === selectedTable);
+
+  const displayValue = selectedTableInfo
+    ? `Table ${selectedTableInfo.tableNumber}`
+    : lockedTableLabel || undefined;
 
   return (
-    <div className="flex items-center gap-3">
-      <label className="text-sm font-medium">Select Table:</label>
+    <div className="flex w-full sm:w-auto flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+      <label className="text-xs sm:text-sm font-medium leading-none">Select Table:</label>
       <Select value={selectedTable || ""} onValueChange={setSelectedTable} disabled={disabled}>
-        <SelectTrigger className="w-auto min-w-[160px] max-w-[260px]">
+        <SelectTrigger className="w-full sm:w-auto min-w-0 sm:min-w-[160px] sm:max-w-[260px]">
           {isLoading ? (
             <div className="flex items-center gap-2">
               <Loader2 className="h-3 w-3 animate-spin" />
               <span className="text-muted-foreground text-sm">Loading...</span>
             </div>
           ) : (
-            <SelectValue placeholder="Choose a table" />
+            <SelectValue placeholder="Choose a table">
+              {displayValue}
+            </SelectValue>
           )}
         </SelectTrigger>
         <SelectContent>

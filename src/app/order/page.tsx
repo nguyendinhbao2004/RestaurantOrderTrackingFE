@@ -31,6 +31,7 @@ export default function OrderPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [showOrderStatus, setShowOrderStatus] = useState(false);
+  const [lockedTableLabel, setLockedTableLabel] = useState<string | null>(null);
 
   const { placeOrder, setSelectedTable } = useOrder();
   const [isSessionLocked, setIsSessionLocked] = useState(false);
@@ -43,6 +44,7 @@ export default function OrderPage() {
     fetchTableBySession(session)
       .then((res) => {
         setSelectedTable(res.data.tableId);
+        setLockedTableLabel(`Table ${res.data.tableNumber} (${res.data.areaName})`);
         setIsSessionLocked(true);
         // Remove session param from URL without reload
         const url = new URL(window.location.href);
@@ -140,6 +142,21 @@ export default function OrderPage() {
     return menuItems.filter((item) => item.categoryName === selectedCategory);
   }, [menuItems, selectedCategory]);
 
+  const paginationPages = useMemo(() => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const start = Math.max(1, pageIndex - 2);
+    const end = Math.min(totalPages, start + 4);
+    const normalizedStart = Math.max(1, end - 4);
+
+    return Array.from(
+      { length: end - normalizedStart + 1 },
+      (_, i) => normalizedStart + i,
+    );
+  }, [pageIndex, totalPages]);
+
   const handlePlaceOrder = () => {
     const order = placeOrder();
     if (order) {
@@ -152,7 +169,7 @@ export default function OrderPage() {
     <div className="min-h-screen bg-orange-50/50 dark:bg-orange-950/20">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" asChild>
@@ -174,31 +191,34 @@ export default function OrderPage() {
                 </Link>
               </Button>
               <div>
-                <h1 className="text-2xl font-bold">
+                <h1 className="text-xl sm:text-2xl font-bold">
                   <span className="text-orange-600">
                     Restaurant Menu
                   </span>
                 </h1>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-xs sm:text-sm">
                   Select your dishes and place an order
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex w-full md:w-auto flex-wrap md:flex-nowrap items-start sm:items-center gap-2 sm:gap-3">
               <VoiceOrderButton
                 isListening={isListening}
                 isSupported={isSupported}
                 onToggle={toggleListening}
               />
-              <TableSelector disabled={isSessionLocked} />
+              <TableSelector
+                disabled={isSessionLocked}
+                lockedTableLabel={lockedTableLabel}
+              />
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Menu Section */}
           <div className="flex-1">
             {/* Voice Order Feedback */}
@@ -285,7 +305,7 @@ export default function OrderPage() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 mt-8">
+                  <div className="mt-8 flex items-center justify-center gap-2 overflow-x-auto pb-1">
                     <Button
                       variant="outline"
                       size="sm"
@@ -296,24 +316,22 @@ export default function OrderPage() {
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
 
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      (page) => (
-                        <Button
-                          key={page}
-                          variant={page === pageIndex ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setPageIndex(page)}
-                          disabled={isLoading}
-                          className={`h-9 w-9 p-0 ${
-                            page === pageIndex
-                              ? "bg-orange-600 text-white border-0 hover:bg-orange-700"
-                              : ""
-                          }`}
-                        >
-                          {page}
-                        </Button>
-                      ),
-                    )}
+                    {paginationPages.map((page) => (
+                      <Button
+                        key={page}
+                        variant={page === pageIndex ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPageIndex(page)}
+                        disabled={isLoading}
+                        className={`h-9 w-9 shrink-0 p-0 ${
+                          page === pageIndex
+                            ? "bg-orange-600 text-white border-0 hover:bg-orange-700"
+                            : ""
+                        }`}
+                      >
+                        {page}
+                      </Button>
+                    ))}
 
                     <Button
                       variant="outline"
@@ -334,7 +352,7 @@ export default function OrderPage() {
 
           {/* Cart Sidebar */}
           <aside className="lg:w-80 xl:w-96">
-            <div className="sticky top-24">
+            <div className="lg:sticky lg:top-24">
               <Cart onPlaceOrder={handlePlaceOrder} />
             </div>
           </aside>

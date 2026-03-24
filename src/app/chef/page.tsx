@@ -1,168 +1,298 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    ArrowLeft,
+    Clock3,
+    Grid3X3,
+    Settings,
+    Volume2,
+    CheckCircle2,
+} from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOrder } from "@/contexts/OrderContext";
-import { getOrderStatusColor, formatDate, formatCurrency } from "@/lib/helpers";
-import { OrderStatus } from "@/types";
+import { API_BASE_URL } from "@/lib/api-config";
+import { httpClient, type Pagination } from "@/lib/http-client";
 
-const statusFlow: OrderStatus[] = ["pending", "cooking", "ready"];
+interface ApiOrderItem {
+    id: string;
+    orderId: string;
+    productName: string;
+    status: string;
+    tableId: string;
+    tableNumber: string;
+    createdAt: string;
+    createdBy: string | null;
+    createdByName: string | null;
+}
+
+interface QueueItem {
+    id: string;
+    orderId: string;
+    productName: string;
+    status: string;
+    tableNumber: string;
+    createdAt: string;
+    createdBy: string | null;
+    createdByName: string | null;
+    quantity: number;
+}
+
+const defaultPagination: Pagination = {
+    pageNumber: 1,
+    pageSize: 10,
+    totalPages: 1,
+    totalRecords: 0,
+    hasPreviousPage: false,
+    hasNextPage: false,
+};
+
+const statusLabelMap: Record<string, string> = {
+    pending: "Chờ chế biến",
+    cooking: "Đang nấu",
+    ready: "Sẵn sàng",
+    served: "Đã phục vụ",
+    cancelled: "Đã hủy",
+};
+
+const ORDER_ITEMS_PAGE_SIZE = 10;
+
+function getMinutesAgo(isoDate: string): string {
+    const diffMs = Date.now() - new Date(isoDate).getTime();
+    const mins = Math.max(1, Math.floor(diffMs / 60000));
+    return `${mins} phút trước`;
+}
 
 export default function ChefPage() {
     const { user, logout } = useAuth();
-    const { orders, updateOrderStatus } = useOrder();
+    const [clock, setClock] = useState(() => new Date());
+    const [isLoading, setIsLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [items, setItems] = useState<ApiOrderItem[]>([]);
+    const [pagination, setPagination] = useState<Pagination>(defaultPagination);
+    const [pageIndex, setPageIndex] = useState(1);
 
-    // Filter orders that chefs care about (pending and cooking)
-    const activeOrders = orders.filter(
-        (o) => o.status === "pending" || o.status === "cooking"
-    );
-    const pendingOrders = orders.filter((o) => o.status === "pending");
-    const cookingOrders = orders.filter((o) => o.status === "cooking");
+    useEffect(() => {
+        const timer = setInterval(() => setClock(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
-    const handleStatusUpdate = (orderId: string, currentStatus: OrderStatus) => {
-        const currentIndex = statusFlow.indexOf(currentStatus);
-        if (currentIndex < statusFlow.length - 1) {
-            updateOrderStatus(orderId, statusFlow[currentIndex + 1]);
+    useEffect(() => {
+        const fetchOrderItems = async () => {
+            setIsLoading(true);
+            setErrorMessage("");
+
+            try {
+                const response = await httpClient.get<ApiOrderItem[]>(
+                    `${API_BASE_URL}/api/OrderItem?pageIndex=${pageIndex}&pageSize=${ORDER_ITEMS_PAGE_SIZE}`
+                );
+
+                setItems(response.data ?? []);
+                setPagination(response.meta?.pagination ?? defaultPagination);
+            } catch (error) {
+                const fallback = "Không thể tải dữ liệu món đang chờ chế biến.";
+                if (error && typeof error === "object" && "message" in error) {
+                    setErrorMessage(String(error.message || fallback));
+                } else {
+                    setErrorMessage(fallback);
+                }
+                setItems([]);
+                setPagination(defaultPagination);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchOrderItems();
+    }, [pageIndex]);
+
+    const queueItems = useMemo<QueueItem[]>(() => {
+        const grouped = new Map<string, QueueItem>();
+
+        for (const item of items) {
+            const key = [item.orderId, item.productName, item.tableNumber, item.status].join("|");
+            const existing = grouped.get(key);
+
+            if (existing) {
+                existing.quantity += 1;
+                if (new Date(item.createdAt).getTime() < new Date(existing.createdAt).getTime()) {
+                    existing.createdAt = item.createdAt;
+                }
+                if (!existing.createdByName && item.createdByName) {
+                    existing.createdByName = item.createdByName;
+                }
+                continue;
+            }
+
+            grouped.set(key, {
+                id: item.id,
+                orderId: item.orderId,
+                productName: item.productName,
+                status: item.status,
+                tableNumber: item.tableNumber,
+                createdAt: item.createdAt,
+                createdBy: item.createdBy,
+                createdByName: item.createdByName,
+                quantity: 1,
+            });
         }
-    };
+
+        return Array.from(grouped.values()).sort(
+            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+    }, [items]);
+
+    const pendingCount = queueItems.filter((item) => item.status.toLowerCase() === "pending").length;
 
     return (
-        <div className="min-h-screen bg-orange-50/50 dark:bg-orange-950/20">
-            {/* Header */}
-            <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="icon" asChild>
-                                <Link href="/login">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="m12 19-7-7 7-7" />
-                                        <path d="M19 12H5" />
-                                    </svg>
-                                </Link>
-                            </Button>
-                            <div>
-                                <h1 className="text-2xl font-bold">
-                                    <span className="text-orange-600">
-                                        Kitchen Dashboard
-                                    </span>
-                                </h1>
-                                <p className="text-muted-foreground text-sm">
-                                    Welcome, Chef {user?.name?.split(" ")[0]}
-                                </p>
-                            </div>
+        <div className="min-h-screen bg-muted/20">
+            <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+                <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between gap-4 px-4 py-4 md:px-6">
+                    <div className="flex items-center gap-3">
+                        <Button variant="ghost" size="icon" asChild>
+                            <Link href="/login">
+                                <ArrowLeft className="h-5 w-5" />
+                            </Link>
+                        </Button>
+                        <div>
+                            <p className="text-2xl font-bold leading-none">KDS Bếp Trung Tâm</p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Chef {user?.name?.split(" ")[0] || "-"}
+                            </p>
                         </div>
-                        <Button variant="outline" onClick={logout}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                                <polyline points="16 17 21 12 16 7" />
-                                <line x1="21" x2="9" y1="12" y2="12" />
-                            </svg>
-                            Logout
+                    </div>
+                    <div className="flex items-center gap-2 md:gap-3">
+                        <div className="rounded-full border bg-muted px-3 py-1.5 text-lg font-semibold tabular-nums">
+                            <Clock3 className="mr-2 inline h-4 w-4" />
+                            {clock.toLocaleTimeString("vi-VN", { hour12: false })}
+                        </div>
+                        <Button variant="ghost" size="icon" aria-label="Volume">
+                            <Volume2 className="h-5 w-5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" aria-label="Settings">
+                            <Settings className="h-5 w-5" />
                         </Button>
                     </div>
                 </div>
             </header>
 
-            {/* Stats */}
-            <div className="max-w-7xl mx-auto px-6 py-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <Card className="bg-amber-500/10 border-amber-500/20">
-                        <CardContent className="p-4 text-center">
-                            <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
-                                {pendingOrders.length}
-                            </div>
-                            <div className="text-sm text-muted-foreground">Pending</div>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-amber-500/10 border-amber-500/20">
-                        <CardContent className="p-4 text-center">
-                            <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
-                                {cookingOrders.length}
-                            </div>
-                            <div className="text-sm text-muted-foreground">Cooking</div>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-emerald-500/10 border-emerald-500/20">
-                        <CardContent className="p-4 text-center">
-                            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                                {orders.filter((o) => o.status === "ready").length}
-                            </div>
-                            <div className="text-sm text-muted-foreground">Ready</div>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-orange-500/10 border-orange-500/20">
-                        <CardContent className="p-4 text-center">
-                            <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-                                {orders.filter((o) => o.status === "served").length}
-                            </div>
-                            <div className="text-sm text-muted-foreground">Served Today</div>
-                        </CardContent>
-                    </Card>
-                </div>
+            <main className="mx-auto w-full max-w-[1200px] px-4 py-6 md:px-6">
+                <section className="mb-5 flex flex-col gap-4 rounded-2xl border bg-background p-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-xl border bg-muted p-2.5">
+                            <Grid3X3 className="h-5 w-5" />
+                        </div>
+                        <h2 className="text-3xl font-bold">Chờ chế biến</h2>
+                        <Badge variant="secondary" className="rounded-full px-3 py-1 text-base">
+                            {pendingCount} order
+                        </Badge>
+                    </div>
 
-                {/* Order Queue */}
-                <h2 className="text-xl font-bold mb-4">Order Queue</h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2 rounded-xl border bg-muted p-1">
+                            <Button variant="secondary" size="sm">Ưu tiên</Button>
+                            <Button variant="ghost" size="sm">Theo món</Button>
+                            <Button variant="ghost" size="sm">Theo phòng/bàn</Button>
+                        </div>
+                        <Button variant="outline" onClick={logout}>Đăng xuất</Button>
+                    </div>
+                </section>
 
-                {activeOrders.length === 0 ? (
+                {isLoading ? (
                     <Card>
-                        <CardContent className="py-12 text-center text-muted-foreground">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-4 opacity-50">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                <polyline points="22 4 12 14.01 9 11.01" />
-                            </svg>
-                            <p>No active orders!</p>
-                            <p className="text-sm">All caught up for now.</p>
+                        <CardContent className="py-14 text-center text-muted-foreground">
+                            Đang tải danh sách món...
+                        </CardContent>
+                    </Card>
+                ) : errorMessage ? (
+                    <Card>
+                        <CardContent className="py-14 text-center">
+                            <p className="font-medium">{errorMessage}</p>
+                        </CardContent>
+                    </Card>
+                ) : queueItems.length === 0 ? (
+                    <Card>
+                        <CardContent className="py-14 text-center text-muted-foreground">
+                            Không có món nào trong hàng chờ.
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {activeOrders.map((order) => (
-                            <Card key={order.id} className={`${order.status === "pending" ? "border-amber-500/50 bg-amber-500/5" : "border-amber-500/50 bg-amber-500/5"}`}>
-                                <CardHeader className="pb-3">
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle className="text-lg">Order #{order.id}</CardTitle>
-                                        <Badge className={`${getOrderStatusColor(order.status)} text-white`}>
-                                            {order.status}
-                                        </Badge>
+                    <section className="space-y-4">
+                        {queueItems.map((item) => (
+                            <article
+                                key={item.id}
+                                className="rounded-3xl border bg-card px-5 py-5 shadow-sm transition hover:shadow-md"
+                            >
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="space-y-3">
+                                        <h3 className="text-4xl font-bold leading-tight">
+                                            {item.productName}
+                                        </h3>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Badge variant="outline" className="rounded-xl px-3 py-1 text-lg">
+                                                Bàn {item.tableNumber}
+                                            </Badge>
+                                            <Badge variant="outline" className="rounded-xl px-3 py-1 text-lg">
+                                                <Clock3 className="mr-1.5 h-4 w-4" />
+                                                {getMinutesAgo(item.createdAt)}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-lg text-muted-foreground">
+                                            Mã: {item.orderId.slice(0, 8).toUpperCase()} • Tạo bởi: {item.createdByName ?? item.createdBy ?? "Khách tự order"}
+                                        </p>
                                     </div>
-                                    <p className="text-sm text-muted-foreground">
-                                        Table {order.tableId} • {formatDate(order.createdAt)}
-                                    </p>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2 mb-4">
-                                        {order.items.map((item, idx) => (
-                                            <div key={idx} className="flex justify-between text-sm">
-                                                <span className="font-medium">
-                                                    {item.quantity}x {item.menuItem.name}
-                                                </span>
-                                                {item.notes && (
-                                                    <span className="text-muted-foreground italic text-xs">
-                                                        {item.notes}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        ))}
+
+                                    <div className="flex items-center gap-4 lg:ml-auto">
+                                        <div className="w-20 rounded-2xl border bg-muted px-2 py-3 text-center">
+                                            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">SL</p>
+                                            <p className="text-4xl font-bold leading-none">{item.quantity}</p>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {item.quantity > 1 && (
+                                                <Button size="lg" variant="outline">
+                                                    Xong 1 phần
+                                                </Button>
+                                            )}
+                                            <Button size="lg">
+                                                <CheckCircle2 className="mr-2 h-5 w-5" />
+                                                Xong tất cả
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <Button
-                                        onClick={() => handleStatusUpdate(order.id, order.status)}
-                                        className={`w-full ${order.status === "pending"
-                                            ? "bg-amber-600 hover:bg-amber-700"
-                                            : "bg-emerald-600 hover:bg-emerald-700"
-                                            } text-white`}
-                                    >
-                                        {order.status === "pending" ? "Start Cooking" : "Mark Ready"}
-                                    </Button>
-                                </CardContent>
-                            </Card>
+                                </div>
+                                <div className="mt-4 text-sm text-muted-foreground">
+                                    Trạng thái: {statusLabelMap[item.status.toLowerCase()] ?? item.status}
+                                </div>
+                            </article>
                         ))}
-                    </div>
+                    </section>
                 )}
-            </div>
+
+                <div className="mt-6 flex flex-col gap-3 rounded-2xl border bg-background p-4 md:flex-row md:items-center md:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        Trang {pagination.pageNumber}/{Math.max(1, pagination.totalPages)} • Tổng {pagination.totalRecords} món
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setPageIndex((prev) => Math.max(1, prev - 1))}
+                            disabled={!pagination.hasPreviousPage || isLoading}
+                        >
+                            Trước
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setPageIndex((prev) => prev + 1)}
+                            disabled={!pagination.hasNextPage || isLoading}
+                        >
+                            Sau
+                        </Button>
+                    </div>
+                </div>
+            </main>
         </div>
     );
 }
