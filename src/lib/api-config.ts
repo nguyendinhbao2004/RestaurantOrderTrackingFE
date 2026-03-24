@@ -3,11 +3,12 @@
  * Centralized file for all API endpoints used in the application.
  */
 
-// Base URL — reads from env, falls back to default
+// Base URL — reads from env, falls back to dev tunnel URL.
 const RAW_API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "https://gjrl0zn6-7260.asse.devtunnels.ms";
+    process.env.NEXT_PUBLIC_API_BASE_URL || "https://localhost:7260";
 
-export const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");;
+
+export const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");
 
 // ==================== AUTH ====================
 export const API_ENDPOINTS = {

@@ -67,7 +67,8 @@ interface CartItem {
 type PaymentMethod = "cash" | "bank";
 type CopyField = "accountNumber" | "amount" | "description";
 
-const TABLE_PAGE_SIZE = 8;
+const TABLE_PAGE_SIZE = 18;
+const TABLE_GRID_SLOT_COUNT = 18;
 const MENU_PAGE_SIZE = 6;
 const DEFAULT_PAYMENT_ORDER_STATUS = 4;
 const ORDER_TYPE_TOGGLE_OPTIONS = [
@@ -307,6 +308,7 @@ export default function CashierPOSPage() {
   const [orderType, setOrderType] = useState<ApiOrderType>(ApiOrderType.DineIn);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [saveOrderError, setSaveOrderError] = useState<string | null>(null);
+  const [isAddingItemsMode, setIsAddingItemsMode] = useState(false);
 
   /* ── Payment Modal ── */
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -400,6 +402,20 @@ export default function CashierPOSPage() {
     if (activeOrder) return activeOrderTotal;
     return cartTotal;
   }, [activeOrder, activeOrderTotal, cartTotal]);
+
+  const shouldHideCheckoutButton = useMemo(() => {
+    if (!activeOrder) return false;
+
+    const normalizedOrderType = (activeOrder.orderType ?? "")
+      .trim()
+      .toLowerCase();
+    const normalizedOrderStatus = activeOrder.status.trim().toLowerCase();
+
+    return (
+      normalizedOrderType === "takeaway" &&
+      normalizedOrderStatus === "confirmed"
+    );
+  }, [activeOrder]);
 
   const cashChange = useMemo(() => {
     const given = parseFloat(cashGiven.replace(/[^0-9]/g, "")) || 0;
@@ -523,6 +539,7 @@ export default function CashierPOSPage() {
     setCart([]);
     setTableDetail(null);
     setSaveOrderError(null);
+    setIsAddingItemsMode(false);
     await loadTableDetail(table.id);
   }, [loadTableDetail]);
 
@@ -708,6 +725,7 @@ export default function CashierPOSPage() {
     setCart([]);
     setTableDetail(null);
     setSelectedTable(null);
+    setIsAddingItemsMode(false);
   }, [selectedTable]);
 
   /* ─── Create bill + handle payment ─── */
@@ -886,6 +904,14 @@ export default function CashierPOSPage() {
     );
   }, [selectedAreaName, tableFilter, tables]);
 
+  const tableGridSlots = useMemo(
+    () =>
+      Array.from({ length: TABLE_GRID_SLOT_COUNT }, (_, index) =>
+        filteredTables[index] ?? null,
+      ),
+    [filteredTables],
+  );
+
   useEffect(() => {
     if (selectedAreaName === "all") return;
     if (tableAreas.includes(selectedAreaName)) return;
@@ -974,262 +1000,301 @@ export default function CashierPOSPage() {
         </div>
       </header>
 
-      {/* ── 3-column body ── */}
+      {/* ── 2-column body ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* ════════════════════════════════════════
-            COLUMN 1 – Table Map (25%)
-        ════════════════════════════════════════ */}
-        <div className="w-[25%] min-w-[220px] flex flex-col border-r border-border bg-white dark:bg-stone-900">
-          <div className="px-3 py-3 border-b border-border flex-shrink-0">
-            <h2 className="text-sm font-bold mb-2 text-stone-700 dark:text-stone-200">
-              Sơ đồ bàn
-            </h2>
-            {/* Filter pills */}
-            <div className="flex gap-1 flex-wrap">
-              {(
-                [
-                  { value: "all", label: "Tất cả" },
-                  { value: "available", label: "Trống" },
-                  { value: "occupied", label: "Có khách" },
-                ] as const
-              ).map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setTableFilter(f.value)}
-                  className={`text-xs px-3 py-1 rounded-full border transition-colors font-medium ${
-                    tableFilter === f.value
-                      ? "bg-orange-600 text-white border-orange-600"
-                      : "bg-transparent text-muted-foreground border-border hover:border-orange-400 hover:text-orange-600"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="mt-2.5 flex items-center gap-2">
-              <label
-                htmlFor="table-area-filter"
-                className="text-xs font-medium text-muted-foreground whitespace-nowrap"
-              >
-                Khu vực
-              </label>
-              <select
-                id="table-area-filter"
-                value={selectedAreaName}
-                onChange={(event) => setSelectedAreaName(event.target.value)}
-                className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs"
-              >
-                <option value="all">Tất cả khu vực</option>
-                {tableAreas.map((areaName) => (
-                  <option key={areaName} value={areaName}>
-                    {areaName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1">
-            {tablesLoading ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-                <p className="text-xs text-muted-foreground">Đang tải bàn...</p>
-              </div>
-            ) : tablesError ? (
-              <div className="p-4 text-center">
-                <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
-                <p className="text-xs text-destructive">{tablesError}</p>
+        {!isAddingItemsMode ? (
+          <div className="flex-1 min-w-[260px] flex flex-col border-r border-border bg-white dark:bg-stone-900">
+            <div className="px-3 py-3 border-b border-border flex-shrink-0 sticky top-0 z-10 bg-white dark:bg-stone-900">
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <Button
+                  type="button"
                   size="sm"
-                  variant="outline"
-                  className="mt-2 text-xs"
-                  onClick={loadTables}
+                  variant="default"
+                  className="h-7 px-2.5 text-xs"
+                  disabled={!selectedTable}
+                  onClick={() => setIsAddingItemsMode(true)}
                 >
-                  Thử lại
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Mở menu gọi món
                 </Button>
               </div>
-            ) : (
-              <div className="p-3 grid grid-cols-2 gap-3">
-                {filteredTables.map((table) => {
-                  const colors = getTableStatusColors(table.status);
-                  const isSelected = selectedTable?.id === table.id;
-                  return (
-                    <button
-                      key={table.id}
-                      onClick={() => handleSelectTable(table)}
-                      className="flex flex-col items-center gap-1.5 py-2 px-1 rounded-xl transition-all hover:scale-[1.03] active:scale-[0.97]"
-                    >
-                      {/* Floor-plan icon — tableNumber + capacity shown inside */}
-                      <TableFloorPlan
-                        capacity={table.capacity}
-                        status={table.status}
-                        isSelected={isSelected}
-                        tableNumber={table.tableNumber}
-                      />
-                    </button>
-                  );
-                })}
-                {filteredTables.length === 0 && (
-                  <div className="col-span-2 text-center py-8 text-xs text-muted-foreground">
-                    Không có bàn phù hợp
-                  </div>
-                )}
-              </div>
-            )}
-          </ScrollArea>
-
-          {/* Table pagination */}
-          {tableTotalPages > 1 && (
-            <div className="px-3 pb-3 flex items-center justify-center gap-1 border-t border-border pt-2 flex-shrink-0">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7 rounded-full"
-                onClick={() => setTablePage((p) => Math.max(1, p - 1))}
-                disabled={tablePage === 1}
-              >
-                <ChevronLeft className="h-3 w-3" />
-              </Button>
-              <span className="text-xs text-muted-foreground px-1">
-                {tablePage}/{tableTotalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7 rounded-full"
-                onClick={() =>
-                  setTablePage((p) => Math.min(tableTotalPages, p + 1))
-                }
-                disabled={tablePage === tableTotalPages}
-              >
-                <ChevronRight className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-        </div>
-
-        {/* ════════════════════════════════════════
-            COLUMN 2 – Menu (50%)
-        ════════════════════════════════════════ */}
-        <div className="flex-1 flex flex-col min-w-0 bg-stone-50 dark:bg-stone-950">
-          {/* Search + categories */}
-          <div className="px-4 py-3 border-b border-border bg-white dark:bg-stone-900 flex-shrink-0">
-            <div className="relative mb-2.5">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm món ăn..."
-                className="pl-9 rounded-full text-sm h-9"
-              />
-            </div>
-            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                onClick={() => setSelectedCategory("all")}
-                className={`flex-shrink-0 text-xs px-3 py-1 rounded-full border font-medium transition-colors ${
-                  selectedCategory === "all"
-                    ? "bg-orange-600 text-white border-orange-600"
-                    : "bg-transparent text-muted-foreground border-border hover:text-orange-600 hover:border-orange-300"
-                }`}
-              >
-                Tất cả
-              </button>
-              {categories
-                .filter((c) => c.isActive)
-                .map((cat) => (
+              <h2 className="text-sm font-bold mb-2 text-stone-700 dark:text-stone-200">
+                Sơ đồ bàn
+              </h2>
+              <div className="flex gap-1 flex-wrap">
+                {(
+                  [
+                    { value: "all", label: "Tất cả" },
+                    { value: "available", label: "Trống" },
+                    { value: "occupied", label: "Có khách" },
+                  ] as const
+                ).map((f) => (
                   <button
-                    key={cat.id}
-                    onClick={() => setSelectedCategory(cat.name)}
-                    className={`flex-shrink-0 text-xs px-3 py-1 rounded-full border font-medium transition-colors ${
-                      selectedCategory === cat.name
+                    key={f.value}
+                    onClick={() => setTableFilter(f.value)}
+                    className={`text-xs px-3 py-1 rounded-full border transition-colors font-medium ${
+                      tableFilter === f.value
                         ? "bg-orange-600 text-white border-orange-600"
-                        : "bg-transparent text-muted-foreground border-border hover:text-orange-600 hover:border-orange-300"
+                        : "bg-transparent text-muted-foreground border-border hover:border-orange-400 hover:text-orange-600"
                     }`}
                   >
-                    {cat.name}
+                    {f.label}
                   </button>
                 ))}
+              </div>
+
+              <div className="mt-2.5 flex items-center gap-2">
+                <label
+                  htmlFor="table-area-filter"
+                  className="text-xs font-medium text-muted-foreground whitespace-nowrap"
+                >
+                  Khu vực
+                </label>
+                <select
+                  id="table-area-filter"
+                  value={selectedAreaName}
+                  onChange={(event) => setSelectedAreaName(event.target.value)}
+                  className="w-full h-8 rounded-md border border-input bg-background px-2.5 text-xs"
+                >
+                  <option value="all">Tất cả khu vực</option>
+                  {tableAreas.map((areaName) => (
+                    <option key={areaName} value={areaName}>
+                      {areaName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1">
+              {tablesLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                  <p className="text-xs text-muted-foreground">Đang tải bàn...</p>
+                </div>
+              ) : tablesError ? (
+                <div className="p-4 text-center">
+                  <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
+                  <p className="text-xs text-destructive">{tablesError}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 text-xs"
+                    onClick={loadTables}
+                  >
+                    Thử lại
+                  </Button>
+                </div>
+              ) : (
+                <div className="p-3 grid grid-cols-6 gap-3">
+                  {filteredTables.length === 0 ? (
+                    <div className="col-span-6 text-center py-8 text-xs text-muted-foreground">
+                      Không có bàn phù hợp
+                    </div>
+                  ) : (
+                    tableGridSlots.map((table, index) => {
+                      if (!table) {
+                        return <div key={`table-empty-${index}`} className="h-[110px]" />;
+                      }
+
+                      const isSelected = selectedTable?.id === table.id;
+                      return (
+                        <button
+                          key={table.id}
+                          onClick={() => handleSelectTable(table)}
+                          className="flex flex-col items-center justify-center gap-1.5 py-2 px-1 rounded-xl transition-all hover:scale-[1.03] active:scale-[0.97]"
+                        >
+                          <TableFloorPlan
+                            capacity={table.capacity}
+                            status={table.status}
+                            isSelected={isSelected}
+                            tableNumber={table.tableNumber}
+                          />
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+
+            {tableTotalPages > 1 && (
+              <div className="px-3 pb-3 flex items-center justify-center gap-1 border-t border-border pt-2 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+                  disabled={tablePage === 1}
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
+                <span className="text-xs text-muted-foreground px-1">
+                  {tablePage}/{tableTotalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  onClick={() =>
+                    setTablePage((p) => Math.min(tableTotalPages, p + 1))
+                  }
+                  disabled={tablePage === tableTotalPages}
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col min-w-0 bg-stone-50 dark:bg-stone-950 border-r border-border">
+            <div className="px-4 py-3 border-b border-border bg-white dark:bg-stone-900 flex-shrink-0 sticky top-0 z-10">
+              <div className="mb-2.5 flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2.5 text-xs"
+                  onClick={() => setIsAddingItemsMode(false)}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+                  Quay lại sơ đồ bàn
+                </Button>
+                <div className="inline-flex rounded-lg bg-stone-100 dark:bg-stone-800 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingItemsMode(false)}
+                    className="h-7 rounded-md px-2.5 text-xs font-semibold text-stone-600 hover:text-stone-900 dark:text-stone-300 dark:hover:text-white"
+                  >
+                    Sơ đồ bàn
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingItemsMode(true)}
+                    className="h-7 rounded-md px-2.5 text-xs font-semibold bg-white text-stone-800 shadow-sm dark:bg-stone-700 dark:text-stone-100"
+                  >
+                    Menu
+                  </button>
+                </div>
+              </div>
+              <h2 className="text-sm font-bold text-stone-700 dark:text-stone-200 mb-2.5">
+                Menu món ăn
+              </h2>
+              <div className="relative mb-2.5">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm món ăn..."
+                  className="pl-9 rounded-full text-sm h-9"
+                />
+              </div>
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                <button
+                  onClick={() => setSelectedCategory("all")}
+                  className={`flex-shrink-0 text-xs px-3 py-1 rounded-full border font-medium transition-colors ${
+                    selectedCategory === "all"
+                      ? "bg-orange-600 text-white border-orange-600"
+                      : "bg-transparent text-muted-foreground border-border hover:text-orange-600 hover:border-orange-300"
+                  }`}
+                >
+                  Tất cả
+                </button>
+                {categories
+                  .filter((c) => c.isActive)
+                  .map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.name)}
+                      className={`flex-shrink-0 text-xs px-3 py-1 rounded-full border font-medium transition-colors ${
+                        selectedCategory === cat.name
+                          ? "bg-orange-600 text-white border-orange-600"
+                          : "bg-transparent text-muted-foreground border-border hover:text-orange-600 hover:border-orange-300"
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            <ScrollArea className="flex-1 min-h-0">
+              {menuLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
+                  <p className="text-sm text-muted-foreground">
+                    Đang tải thực đơn...
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3">
+                  {filteredItems.length === 0 ? (
+                    <div className="text-center py-20">
+                      <p className="text-muted-foreground text-sm">
+                        Không tìm thấy món ăn
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-3">
+                      {filteredItems.map((item) => (
+                        <MenuCard
+                          key={item.id}
+                          item={item}
+                          onAdd={() => addToCart(item)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+
+            <div className="flex-shrink-0 border-t border-border py-2 flex items-center justify-center gap-2 bg-white dark:bg-stone-900">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
+                disabled={menuPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {Array.from({ length: menuTotalPages }, (_, i) => i + 1).map(
+                (p) => (
+                  <Button
+                    key={p}
+                    variant={p === menuPage ? "default" : "outline"}
+                    size="icon"
+                    className={`h-8 w-8 rounded-full ${
+                      p === menuPage ? "bg-orange-600 text-white border-0" : ""
+                    }`}
+                    onClick={() => setMenuPage(p)}
+                  >
+                    {p}
+                  </Button>
+                ),
+              )}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+                onClick={() =>
+                  setMenuPage((p) => Math.min(menuTotalPages, p + 1))
+                }
+                disabled={menuPage === menuTotalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-
-          <ScrollArea className="flex-1">
-            {menuLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
-                <p className="text-sm text-muted-foreground">
-                  Đang tải thực đơn...
-                </p>
-              </div>
-            ) : (
-              <div className="p-4">
-                {filteredItems.length === 0 ? (
-                  <div className="text-center py-20">
-                    <p className="text-muted-foreground text-sm">
-                      Không tìm thấy món ăn
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-3 gap-4">
-                    {filteredItems.map((item) => (
-                      <MenuCard
-                        key={item.id}
-                        item={item}
-                        onAdd={() => addToCart(item)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </ScrollArea>
-
-          {/* Menu pagination — fixed at bottom of menu column */}
-          <div className="flex-shrink-0 border-t border-border py-2 flex items-center justify-center gap-2 bg-white dark:bg-stone-900">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              onClick={() => setMenuPage((p) => Math.max(1, p - 1))}
-              disabled={menuPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {Array.from({ length: menuTotalPages }, (_, i) => i + 1).map(
-              (p) => (
-                <Button
-                  key={p}
-                  variant={p === menuPage ? "default" : "outline"}
-                  size="icon"
-                  className={`h-8 w-8 rounded-full ${
-                    p === menuPage ? "bg-orange-600 text-white border-0" : ""
-                  }`}
-                  onClick={() => setMenuPage(p)}
-                >
-                  {p}
-                </Button>
-              ),
-            )}
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-              onClick={() =>
-                setMenuPage((p) => Math.min(menuTotalPages, p + 1))
-              }
-              disabled={menuPage === menuTotalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+        )}
 
         {/* ════════════════════════════════════════
             COLUMN 3 – Cart & Checkout (25%)
         ════════════════════════════════════════ */}
         <div className="w-[26%] min-w-[240px] flex flex-col border-l border-border bg-white dark:bg-stone-900">
           {/* Cart header */}
-          <div className="px-4 py-3 border-b border-border flex-shrink-0">
+          <div className="px-4 py-3 border-b border-border flex-shrink-0 space-y-2.5">
             {selectedTable ? (
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -1289,11 +1354,19 @@ export default function CashierPOSPage() {
                   Chưa có món
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Click món ăn ở giữa để thêm vào giỏ
+                  {isAddingItemsMode
+                    ? "Chọn món ở cột bên trái để thêm vào giỏ"
+                    : "Nhấn Mở menu gọi món để chọn món"}
                 </p>
               </div>
             ) : (
               <div className="px-3 py-3 space-y-2">
+                {cart.length > 0 && (
+                  <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Món thêm trong order hiện tại
+                  </p>
+                )}
+
                 {cart.length === 0 && activeOrderItems.length > 0 && (
                   <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                     Món trong order hiện tại
@@ -1424,11 +1497,17 @@ export default function CashierPOSPage() {
                 variant="outline"
                 className="w-full text-sm h-9"
                 disabled={
-                  cart.length === 0 ||
                   isSavingOrder ||
                   normalizeTableStatus(selectedTable.status) === "outofservice"
                 }
-                onClick={handleSaveOrder}
+                onClick={() => {
+                  if (cart.length === 0) {
+                    setIsAddingItemsMode(true);
+                    return;
+                  }
+
+                  handleSaveOrder();
+                }}
               >
                 {isSavingOrder ? (
                   <>
@@ -1436,19 +1515,21 @@ export default function CashierPOSPage() {
                     ĐANG LƯU...
                   </>
                 ) : (
-                  "LƯU THÊM MÓN"
+                  cart.length === 0 ? "GỌI MÓN" : "LƯU THÊM MÓN"
                 )}
               </Button>
 
               {/* Checkout */}
-              <Button
-                className="w-full bg-orange-600 hover:bg-orange-700 text-white text-sm h-10 font-semibold"
-                disabled={!activeOrder && cart.length === 0}
-                onClick={handleCreateBillAndPayment}
-              >
-                <Receipt className="w-4 h-4 mr-2" />
-                TẠO HÓA ĐƠN &amp; THANH TOÁN
-              </Button>
+              {!shouldHideCheckoutButton && (
+                <Button
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white text-sm h-10 font-semibold"
+                  disabled={!activeOrder && cart.length === 0}
+                  onClick={handleCreateBillAndPayment}
+                >
+                  <Receipt className="w-4 h-4 mr-2" />
+                  TẠO HÓA ĐƠN &amp; THANH TOÁN
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -1860,26 +1941,26 @@ function MenuCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
   return (
     <button
       onClick={onAdd}
-      className="group text-left rounded-xl border border-border bg-white dark:bg-stone-900 overflow-hidden hover:border-orange-400 hover:shadow-lg hover:shadow-orange-100/50 dark:hover:shadow-orange-900/30 transition-all hover:scale-[1.02] active:scale-[0.97]"
+      className="group text-left rounded-lg border border-border bg-white dark:bg-stone-900 overflow-hidden hover:border-orange-400 hover:shadow-md hover:shadow-orange-100/50 dark:hover:shadow-orange-900/30 transition-all hover:scale-[1.01] active:scale-[0.98]"
     >
-      <div className="h-40 overflow-hidden bg-stone-100 dark:bg-stone-800 relative">
+      <div className="h-32 overflow-hidden bg-stone-100 dark:bg-stone-800 relative">
         <Image
           src={item.image}
           alt={item.name}
           width={200}
-          height={144}
+          height={128}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        <div className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-orange-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 shadow-md">
-          <Plus className="w-4 h-4 text-white" />
+        <div className="absolute bottom-2 right-2 w-6 h-6 rounded-full bg-orange-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 shadow-md">
+          <Plus className="w-3.5 h-3.5 text-white" />
         </div>
       </div>
-      <div className="p-3">
-        <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 leading-tight line-clamp-2 mb-1">
+      <div className="p-2.5">
+        <p className="text-[15px] font-semibold text-stone-800 dark:text-stone-100 leading-tight line-clamp-2 mb-1">
           {item.name}
         </p>
-        <p className="text-sm font-bold text-orange-600">
+        <p className="text-base font-bold text-orange-600">
           {formatCurrency(item.price)}
         </p>
       </div>

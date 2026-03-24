@@ -283,20 +283,6 @@ export default function LoginPage() {
                         </form>
                     </CardContent>
                     <CardFooter className="flex justify-center border-t border-border/50 pt-4 pb-4 bg-muted/20">
-                        <p className="text-sm text-muted-foreground mr-1">
-                            {isLoginMode ? "Don't have an account?" : "Already have an account?"}
-                        </p>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsLoginMode(!isLoginMode);
-                                setError("");
-                                setSuccessMessage("");
-                            }}
-                            className="text-sm font-semibold text-orange-600 hover:text-orange-700 hover:underline"
-                        >
-                            {isLoginMode ? "Register as Customer" : "Sign In"}
-                        </button>
                     </CardFooter>
                 </Card>
 
