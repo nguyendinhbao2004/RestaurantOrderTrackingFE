@@ -50,9 +50,8 @@ export const API_ENDPOINTS = {
     orderItems: {
         list: (pageIndex: number, pageSize: number) =>
             `${API_BASE_URL}/api/OrderItem?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-        confirmed: (pageIndex: number, pageSize: number) =>
-            `${API_BASE_URL}/api/OrderItem/confirmed?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-        assignChef: `${API_BASE_URL}/api/OrderItem/assign-chef`,
+        byAccount: `${API_BASE_URL}/api/OrderItem/by-account`,
+        updateStatus: `${API_BASE_URL}/api/OrderItem/Update-Status`,
     },
 
     // ==================== HEAD CHEF ====================

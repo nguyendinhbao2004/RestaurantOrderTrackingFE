@@ -7,19 +7,60 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import {Dialog, DialogContent, DialogHeader, DialogTitle,DialogDescription,} from "@/components/ui/dialog";
-import {Search, Plus, Minus, Trash2, ChevronLeft, ChevronRight, Loader2, AlertCircle, Copy,
-  Check, Banknote, CreditCard, CheckCircle2, LogOut, RefreshCw, UtensilsCrossed, Receipt,} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Search,
+  Plus,
+  Minus,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  AlertCircle,
+  Copy,
+  Check,
+  Banknote,
+  CreditCard,
+  CheckCircle2,
+  LogOut,
+  RefreshCw,
+  UtensilsCrossed,
+  Receipt,
+} from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useBanks } from "@/contexts/BanksContext";
 import { fetchTableDetail, fetchTables } from "@/services/table.service";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
-import { createBill, getPaymentInfoByOrderId, payBill, PaymentInfoByOrderData,} from "@/services/cashier.service";
-import { ApiOrderType, createOrder, createOrderItems, resolveOrderId, updateOrderStatus,} from "@/services/order.service";
-import { buildVietQrImageUrl, createPaymentLink, PaymentLinkData,} from "@/services/online-order.service";
-import { CashierCheckInNotice, consumeCashierCheckInNotice,} from "@/services/work-schedule.service";
+import {
+  createBill,
+  getPaymentInfoByOrderId,
+  payBill,
+  PaymentInfoByOrderData,
+} from "@/services/cashier.service";
+import {
+  ApiOrderType,
+  createOrder,
+  createOrderItems,
+  resolveOrderId,
+  updateOrderStatus,
+} from "@/services/order.service";
+import {
+  buildVietQrImageUrl,
+  createPaymentLink,
+  PaymentLinkData,
+} from "@/services/online-order.service";
+import {
+  CashierCheckInNotice,
+  consumeCashierCheckInNotice,
+} from "@/services/work-schedule.service";
 import { formatCurrency, mapProductsToMenuItems } from "@/lib/helpers";
 import { usePaymentSuccessSignalR, type PaymentMessage,} from "@/hooks/usePaymentSuccessSignalR";
 import { MenuItem, Category } from "@/types";
@@ -77,7 +118,10 @@ const ORDER_TYPE_TOGGLE_OPTIONS = [
 /* ─────────────────────── Helpers ─────────────────────── */
 
 function normalizeTableStatus(status: string | number) {
-  const normalized = String(status).trim().toLowerCase().replace(/[\s_-]/g, "");
+  const normalized = String(status)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]/g, "");
 
   switch (normalized) {
     case "0":
@@ -115,9 +159,9 @@ function getTableStatusLabel(status: string) {
     case "available":
       return "Trống";
     case "occupied":
-      return "Đang phục vụ";
-    case "reserved":
       return "Đã đặt trước";
+    case "reserved":
+      return "Đang phục vụ";
     case "outofservice":
       return "Ngưng phục vụ";
     default:
@@ -316,13 +360,16 @@ export default function CashierPOSPage() {
   const [isCreatingBill, setIsCreatingBill] = useState(false);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [billId, setBillId] = useState("");
-  const [paymentLinkData, setPaymentLinkData] = useState<PaymentLinkData | null>(null);
+  const [paymentLinkData, setPaymentLinkData] =
+    useState<PaymentLinkData | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [isAwaitingTransferConfirmation, setIsAwaitingTransferConfirmation] = useState(false);
+  const [isAwaitingTransferConfirmation, setIsAwaitingTransferConfirmation] =
+    useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [pendingPaymentOrderId, setPendingPaymentOrderId] = useState("");
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
-  const [checkInNotice, setCheckInNotice] = useState<CashierCheckInNotice | null>(null);
+  const [checkInNotice, setCheckInNotice] =
+    useState<CashierCheckInNotice | null>(null);
 
   /* ── Derived ── */
   const selectedBank = useMemo(() => {
@@ -355,7 +402,10 @@ export default function CashierPOSPage() {
     );
   }, [tableDetail]);
 
-  const activeOrderItems = useMemo(() => activeOrder?.items ?? [], [activeOrder]);
+  const activeOrderItems = useMemo(
+    () => activeOrder?.items ?? [],
+    [activeOrder],
+  );
 
   const activeOrderTotal = useMemo(() => {
     if (!activeOrder) return 0;
@@ -504,7 +554,6 @@ export default function CashierPOSPage() {
     if (!notice) return;
 
     setCheckInNotice(notice);
-
   }, []);
 
   useEffect(() => {
@@ -530,14 +579,17 @@ export default function CashierPOSPage() {
   }, []);
 
   /* ─── Select table ─── */
-  const handleSelectTable = useCallback(async (table: ApiTable) => {
-    setSelectedTable(table);
-    setCart([]);
-    setTableDetail(null);
-    setSaveOrderError(null);
-    setIsAddingItemsMode(false);
-    await loadTableDetail(table.id);
-  }, [loadTableDetail]);
+  const handleSelectTable = useCallback(
+    async (table: ApiTable) => {
+      setSelectedTable(table);
+      setCart([]);
+      setTableDetail(null);
+      setSaveOrderError(null);
+      setIsAddingItemsMode(false);
+      await loadTableDetail(table.id);
+    },
+    [loadTableDetail],
+  );
 
   /* ─── Cart operations ─── */
   const addToCart = useCallback((item: MenuItem) => {
@@ -792,7 +844,14 @@ export default function CashierPOSPage() {
       setIsCreatingBill(false);
       setIsCreatingLink(false);
     }
-  }, [activeOrder, billId, isCheckingPaymentInfo, markTableAvailable, paymentMethod, user]);
+  }, [
+    activeOrder,
+    billId,
+    isCheckingPaymentInfo,
+    markTableAvailable,
+    paymentMethod,
+    user,
+  ]);
 
   const handleMarkTransferDone = useCallback(() => {
     if (!pendingPaymentOrderId && !activeOrder?.id) {
@@ -824,14 +883,20 @@ export default function CashierPOSPage() {
           ? Math.trunc(message.orderCode)
           : 0;
 
-      const targetOrderId = (pendingPaymentOrderId || activeOrder?.id || "").trim();
+      const targetOrderId = (
+        pendingPaymentOrderId ||
+        activeOrder?.id ||
+        ""
+      ).trim();
       const targetOrderCode =
         paymentLinkData?.orderCode && paymentLinkData.orderCode > 0
           ? Math.trunc(paymentLinkData.orderCode)
           : 0;
 
       const isMatchedByOrderId =
-        !!incomingOrderId && !!targetOrderId && incomingOrderId === targetOrderId;
+        !!incomingOrderId &&
+        !!targetOrderId &&
+        incomingOrderId === targetOrderId;
       const isMatchedByOrderCode =
         incomingOrderCode > 0 &&
         targetOrderCode > 0 &&
@@ -847,7 +912,12 @@ export default function CashierPOSPage() {
       setShowPaymentModal(true);
       markTableAvailable();
     },
-    [activeOrder?.id, markTableAvailable, paymentLinkData?.orderCode, pendingPaymentOrderId],
+    [
+      activeOrder?.id,
+      markTableAvailable,
+      paymentLinkData?.orderCode,
+      pendingPaymentOrderId,
+    ],
   );
 
   usePaymentSuccessSignalR(handlePaymentSuccessMessage, {
@@ -902,8 +972,9 @@ export default function CashierPOSPage() {
 
   const tableGridSlots = useMemo(
     () =>
-      Array.from({ length: TABLE_GRID_SLOT_COUNT }, (_, index) =>
-        filteredTables[index] ?? null,
+      Array.from(
+        { length: TABLE_GRID_SLOT_COUNT },
+        (_, index) => filteredTables[index] ?? null,
       ),
     [filteredTables],
   );
@@ -933,7 +1004,9 @@ export default function CashierPOSPage() {
                   className={`mt-0.5 h-4 w-4 flex-shrink-0 ${checkInNoticeStyles.icon}`}
                 />
               )}
-              <p className="text-sm font-medium leading-5">{checkInNotice.message}</p>
+              <p className="text-sm font-medium leading-5">
+                {checkInNotice.message}
+              </p>
             </div>
           </div>
         </div>
@@ -1066,7 +1139,9 @@ export default function CashierPOSPage() {
               {tablesLoading ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
                   <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-                  <p className="text-xs text-muted-foreground">Đang tải bàn...</p>
+                  <p className="text-xs text-muted-foreground">
+                    Đang tải bàn...
+                  </p>
                 </div>
               ) : tablesError ? (
                 <div className="p-4 text-center">
@@ -1090,7 +1165,12 @@ export default function CashierPOSPage() {
                   ) : (
                     tableGridSlots.map((table, index) => {
                       if (!table) {
-                        return <div key={`table-empty-${index}`} className="h-[110px]" />;
+                        return (
+                          <div
+                            key={`table-empty-${index}`}
+                            className="h-[110px]"
+                          />
+                        );
                       }
 
                       const isSelected = selectedTable?.id === table.id;
@@ -1305,7 +1385,8 @@ export default function CashierPOSPage() {
                   className={
                     normalizeTableStatus(selectedTable.status) === "available"
                       ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs"
-                      : normalizeTableStatus(selectedTable.status) === "outofservice"
+                      : normalizeTableStatus(selectedTable.status) ===
+                          "outofservice"
                         ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 text-xs"
                         : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-xs"
                   }
@@ -1474,7 +1555,9 @@ export default function CashierPOSPage() {
                 <span className="text-sm text-muted-foreground">
                   Tổng cộng
                   {displayItemCount > 0 && (
-                    <span className="ml-1 text-xs">({displayItemCount} món)</span>
+                    <span className="ml-1 text-xs">
+                      ({displayItemCount} món)
+                    </span>
                   )}
                 </span>
                 <span className="text-lg font-bold text-orange-600">
@@ -1510,8 +1593,10 @@ export default function CashierPOSPage() {
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ĐANG LƯU...
                   </>
+                ) : cart.length === 0 ? (
+                  "GỌI MÓN"
                 ) : (
-                  cart.length === 0 ? "GỌI MÓN" : "LƯU THÊM MÓN"
+                  "LƯU THÊM MÓN"
                 )}
               </Button>
 
@@ -1791,7 +1876,10 @@ export default function CashierPOSPage() {
                       </p>
                     ) : (
                       paymentSummaryItems.map((item) => (
-                        <div key={item.key} className="flex justify-between text-sm">
+                        <div
+                          key={item.key}
+                          className="flex justify-between text-sm"
+                        >
                           <span className="text-muted-foreground">
                             {item.name} × {item.quantity}
                           </span>
@@ -1902,14 +1990,16 @@ export default function CashierPOSPage() {
                       !activeOrder
                     }
                   >
-                    {isCheckingPaymentInfo || isCreatingBill || isCreatingLink ? (
+                    {isCheckingPaymentInfo ||
+                    isCreatingBill ||
+                    isCreatingLink ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         {isCheckingPaymentInfo
                           ? "Đang kiểm tra thanh toán..."
                           : isCreatingBill
-                          ? "Đang tạo hóa đơn..."
-                          : "Đang tạo mã QR..."}
+                            ? "Đang tạo hóa đơn..."
+                            : "Đang tạo mã QR..."}
                       </>
                     ) : (
                       "Xác nhận Thanh toán"
