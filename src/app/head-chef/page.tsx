@@ -2,42 +2,38 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { httpClient, type Pagination } from "@/lib/http-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Clock3, ChefHat, UserCheck, X, Check, CheckCircle2 } from "lucide-react";
 import {
-  getConfirmedOrderItems,
+  Clock3,
+  ChefHat,
+  UserCheck,
+  X,
+  Check,
+  CheckCircle2,
+} from "lucide-react";
+import {
+  getOrderItemsByAccount,
   getAvailableChefs,
-  assignChef,
-  type ConfirmedOrderItem,
+  updateOrderItemStatus,
+  type OrderItemByAccount,
   type AvailableChef,
 } from "@/services/head-chef.service";
 
 // ==================== CONSTANTS ====================
-
-const PAGE_SIZE = 10;
 
 const SPECIALTY_LABELS: Record<string, string> = {
   "2": "Món Á",
   "3": "Món Tây",
 };
 
-const defaultPagination: Pagination = {
-  pageNumber: 1,
-  pageSize: PAGE_SIZE,
-  totalPages: 1,
-  totalRecords: 0,
-  hasPreviousPage: false,
-  hasNextPage: false,
+const STATUS_LABELS: Record<string, string> = {
+  "1": "Chưa phân công",
+  "2": "Đang nấu",
 };
 
 // ==================== HELPERS ====================
-
-function formatPrice(price: number): string {
-  return price.toLocaleString("vi-VN") + "đ";
-}
 
 function getMinutesAgo(isoDate: string): string {
   const diffMs = Date.now() - new Date(isoDate).getTime();
@@ -54,13 +50,14 @@ export default function HeadChefPage() {
   // Order items list state
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [items, setItems] = useState<ConfirmedOrderItem[]>([]);
-  const [pagination, setPagination] = useState<Pagination>(defaultPagination);
-  const [pageIndex, setPageIndex] = useState(1);
+  const [items, setItems] = useState<OrderItemByAccount[]>([]);
   const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
 
+  // Status filter — default to "1" (Chưa phân công)
+  const [statusFilter, setStatusFilter] = useState<string>("1");
+
   // Assign popup state
-  const [popupItemId, setPopupItemId] = useState<string | null>(null);
+  const [popupItem, setPopupItem] = useState<OrderItemByAccount | null>(null);
   const [chefs, setChefs] = useState<AvailableChef[]>([]);
   const [chefsLoading, setChefsLoading] = useState(false);
   const [specialtyFilter, setSpecialtyFilter] = useState<string>("all");
@@ -75,14 +72,13 @@ export default function HeadChefPage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch confirmed order items
+  // Fetch order items by account
   const fetchItems = useCallback(async () => {
     setIsLoading(true);
     setErrorMessage("");
     try {
-      const response = await getConfirmedOrderItems(pageIndex, PAGE_SIZE);
-      setItems(response.data ?? []);
-      setPagination(response.meta?.pagination ?? defaultPagination);
+      const data = await getOrderItemsByAccount();
+      setItems(data);
     } catch (error) {
       const fallback = "Không thể tải danh sách món ăn.";
       setErrorMessage(
@@ -91,19 +87,18 @@ export default function HeadChefPage() {
           : fallback,
       );
       setItems([]);
-      setPagination(defaultPagination);
     } finally {
       setIsLoading(false);
     }
-  }, [pageIndex]);
+  }, []);
 
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
 
   // Open assign popup and load available chefs
-  const openAssignPopup = async (orderItemId: string) => {
-    setPopupItemId(orderItemId);
+  const openAssignPopup = async (item: OrderItemByAccount) => {
+    setPopupItem(item);
     setSpecialtyFilter("all");
     setChefsLoading(true);
     setChefs([]);
@@ -118,21 +113,27 @@ export default function HeadChefPage() {
   };
 
   const closePopup = () => {
-    setPopupItemId(null);
+    setPopupItem(null);
     setChefs([]);
     setAssigningChefId(null);
   };
 
-  // Call assign-chef API, show toast, then refresh
-  const handleAssignChef = async (accountId: string) => {
-    if (!popupItemId) return;
-    setAssigningChefId(accountId);
+  // Call Update-Status API (PUT), show toast, then refresh
+  const handleAssignChef = async (chef: AvailableChef) => {
+    if (!popupItem || !user?.id) return;
+    setAssigningChefId(chef.accountId);
     try {
-      const res = await assignChef({ orderItemId: popupItemId, accountId });
+      const res = await updateOrderItemStatus({
+        orderItemIds: [popupItem.orderItemId],
+        newStatus: 2,
+        accountId: user.id,
+        changeSource: "manual",
+        assigneeId: chef.accountId,
+      });
+
       const successMessage = res.message || "Phân công thành công.";
-      setAssignedIds((prev) => new Set(prev).add(popupItemId));
+      setAssignedIds((prev) => new Set(prev).add(popupItem.orderItemId));
       closePopup();
-      // Show toast
       setToast({ message: successMessage });
       setTimeout(() => {
         setToast(null);
@@ -149,6 +150,11 @@ export default function HeadChefPage() {
     specialtyFilter === "all"
       ? chefs
       : chefs.filter((c) => c.specialty === specialtyFilter);
+
+  const displayedItems =
+    statusFilter === "all"
+      ? items
+      : items.filter((i) => i.status === statusFilter);
 
   // ==================== RENDER ====================
 
@@ -193,10 +199,44 @@ export default function HeadChefPage() {
               variant="secondary"
               className="rounded-full px-3 py-1 text-base"
             >
-              {pagination.totalRecords} món
+              {displayedItems.length} món
             </Badge>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchItems}
+            disabled={isLoading}
+          >
+            Làm mới
+          </Button>
         </section>
+
+        {/* Status filter tabs */}
+        <div className="mb-4 flex items-center gap-2 rounded-xl border bg-background p-1 w-fit">
+          {[
+            { label: "Tất cả", value: "all" },
+            { label: "Chưa phân công", value: "1" },
+            { label: "Đang nấu", value: "2" },
+          ].map((tab) => (
+            <Button
+              key={tab.value}
+              size="sm"
+              variant={statusFilter === tab.value ? "default" : "ghost"}
+              onClick={() => setStatusFilter(tab.value)}
+            >
+              {tab.label}
+              <Badge
+                variant={statusFilter === tab.value ? "secondary" : "outline"}
+                className="ml-1.5 rounded-full px-1.5 py-0 text-xs"
+              >
+                {tab.value === "all"
+                  ? items.length
+                  : items.filter((i) => i.status === tab.value).length}
+              </Badge>
+            </Button>
+          ))}
+        </div>
 
         {/* Table */}
         {isLoading ? (
@@ -211,10 +251,10 @@ export default function HeadChefPage() {
               <p className="font-medium text-destructive">{errorMessage}</p>
             </CardContent>
           </Card>
-        ) : items.length === 0 ? (
+        ) : displayedItems.length === 0 ? (
           <Card>
             <CardContent className="py-14 text-center text-muted-foreground">
-              Không có món ăn nào cần phân công.
+              Không có món ăn nào trong trạng thái này.
             </CardContent>
           </Card>
         ) : (
@@ -222,58 +262,74 @@ export default function HeadChefPage() {
             <table className="w-full table-fixed text-sm">
               <thead className="border-b bg-muted/50">
                 <tr>
-                  <th className="w-[22%] px-5 py-3 text-left font-semibold text-muted-foreground">Tên món</th>
-                  <th className="w-[10%] px-4 py-3 text-left font-semibold text-muted-foreground">Giá</th>
-                  <th className="w-[14%] px-4 py-3 text-left font-semibold text-muted-foreground">Bàn / Khu vực</th>
-                  <th className="w-[11%] px-4 py-3 text-left font-semibold text-muted-foreground">Kênh order</th>
-                  <th className="w-[15%] px-4 py-3 text-left font-semibold text-muted-foreground">Ghi chú</th>
-                  <th className="w-[14%] px-4 py-3 text-left font-semibold text-muted-foreground">Thời gian</th>
-                  <th className="w-[14%] px-4 py-3 text-right font-semibold text-muted-foreground">Thao tác</th>
+                  <th className="w-[24%] px-5 py-3 text-left font-semibold text-muted-foreground">
+                    Tên món
+                  </th>
+                  <th className="w-[18%] px-4 py-3 text-left font-semibold text-muted-foreground">
+                    Người đặt
+                  </th>
+                  <th className="w-[16%] px-4 py-3 text-left font-semibold text-muted-foreground">
+                    Ghi chú
+                  </th>
+                  <th className="w-[10%] px-4 py-3 text-left font-semibold text-muted-foreground">
+                    Trạng thái
+                  </th>
+                  <th className="w-[16%] px-4 py-3 text-left font-semibold text-muted-foreground">
+                    Thời gian
+                  </th>
+                  <th className="w-[16%] px-4 py-3 text-right font-semibold text-muted-foreground">
+                    Thao tác
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
+                {displayedItems.map((item) => (
                   <tr
                     key={item.orderItemId}
                     className="border-b last:border-0 hover:bg-muted/20 transition-colors"
                   >
-                    <td className="px-5 py-4 font-semibold">{item.productName}</td>
-                    <td className="px-4 py-4 text-muted-foreground">{formatPrice(item.productPrice)}</td>
-                    <td className="px-4 py-4">
-                      {item.tableNumber ? (
-                        <Badge variant="outline" className="rounded-lg">
-                          Bàn {item.tableNumber}
-                          {item.areaName ? ` · ${item.areaName}` : ""}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                    <td className="px-5 py-4 font-semibold">
+                      {item.productName}
                     </td>
-                    <td className="px-4 py-4">
-                      <Badge variant="secondary" className="rounded-lg text-xs">
-                        {item.orderChannel}
-                      </Badge>
+                    <td className="px-4 py-4 text-muted-foreground text-xs">
+                      {item.createdByName || item.createdBy || "—"}
                     </td>
                     <td className="px-4 py-4 text-muted-foreground text-xs truncate max-w-0">
                       {item.note || "—"}
                     </td>
                     <td className="px-4 py-4">
+                      <Badge
+                        variant={item.status === "1" ? "outline" : "secondary"}
+                        className="rounded-lg text-xs"
+                      >
+                        {STATUS_LABELS[item.status] ?? item.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-4">
                       <span className="flex items-center gap-1 text-muted-foreground text-xs">
                         <Clock3 className="h-3.5 w-3.5 shrink-0" />
-                        {getMinutesAgo(item.createdAt)}
+                        {getMinutesAgo(item.orderAt)}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <Button
-                        size="sm"
-                        variant={assignedIds.has(item.orderItemId) ? "secondary" : "default"}
-                        className="flex items-center gap-1.5 ml-auto"
-                        onClick={() => openAssignPopup(item.orderItemId)}
-                        disabled={assignedIds.has(item.orderItemId)}
-                      >
-                        <UserCheck className="h-4 w-4" />
-                        {assignedIds.has(item.orderItemId) ? "Đã phân công" : "Phân công"}
-                      </Button>
+                      {item.status !== "2" && (
+                        <Button
+                          size="sm"
+                          variant={
+                            assignedIds.has(item.orderItemId)
+                              ? "secondary"
+                              : "default"
+                          }
+                          className="flex items-center gap-1.5 ml-auto"
+                          onClick={() => openAssignPopup(item)}
+                          disabled={assignedIds.has(item.orderItemId)}
+                        >
+                          <UserCheck className="h-4 w-4" />
+                          {assignedIds.has(item.orderItemId)
+                            ? "Đã phân công"
+                            : "Phân công"}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -282,37 +338,18 @@ export default function HeadChefPage() {
           </section>
         )}
 
-        {/* Pagination */}
-        <div className="mt-6 flex flex-col gap-3 rounded-2xl border bg-background p-4 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Trang {pagination.pageNumber}/{Math.max(1, pagination.totalPages)} •
-            Tổng {pagination.totalRecords} món
-          </p>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setPageIndex((prev) => Math.max(1, prev - 1))}
-              disabled={!pagination.hasPreviousPage || isLoading}
-            >
-              Trước
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setPageIndex((prev) => prev + 1)}
-              disabled={!pagination.hasNextPage || isLoading}
-            >
-              Sau
-            </Button>
-          </div>
+        {/* Item count footer */}
+        <div className="mt-4 text-sm text-muted-foreground text-center">
+          Hiển thị {displayedItems.length}/{items.length} món ăn
         </div>
       </main>
 
       {/* ==================== ASSIGN POPUP ==================== */}
-      {popupItemId && (
+      {popupItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-2xl border bg-background p-6 shadow-xl">
             {/* Popup header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-1">
               <h3 className="text-xl font-bold">Chọn đầu bếp phân công</h3>
               <Button
                 variant="ghost"
@@ -323,6 +360,13 @@ export default function HeadChefPage() {
                 <X className="h-5 w-5" />
               </Button>
             </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Món:{" "}
+              <span className="font-semibold text-foreground">
+                {popupItem.productName}
+              </span>
+              {popupItem.note ? ` · Ghi chú: ${popupItem.note}` : ""}
+            </p>
 
             {/* Specialty filter tabs */}
             <div className="flex items-center gap-2 rounded-xl border bg-muted p-1 mb-4">
@@ -334,7 +378,9 @@ export default function HeadChefPage() {
                 <Button
                   key={tab.value}
                   size="sm"
-                  variant={specialtyFilter === tab.value ? "secondary" : "ghost"}
+                  variant={
+                    specialtyFilter === tab.value ? "secondary" : "ghost"
+                  }
                   onClick={() => setSpecialtyFilter(tab.value)}
                 >
                   {tab.label}
@@ -361,13 +407,14 @@ export default function HeadChefPage() {
                     <div>
                       <p className="font-semibold">{chef.fullName}</p>
                       <p className="text-xs text-muted-foreground">
-                        {SPECIALTY_LABELS[chef.specialty] ?? `Nhóm ${chef.specialty}`}
+                        {SPECIALTY_LABELS[chef.specialty] ??
+                          `Nhóm ${chef.specialty}`}
                         {" · "}Trình độ: {chef.skillLevel}
                       </p>
                     </div>
                     <Button
                       size="sm"
-                      onClick={() => handleAssignChef(chef.accountId)}
+                      onClick={() => handleAssignChef(chef)}
                       disabled={assigningChefId !== null}
                     >
                       <Check className="h-4 w-4 mr-1" />
