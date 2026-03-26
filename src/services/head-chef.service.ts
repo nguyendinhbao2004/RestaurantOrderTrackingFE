@@ -1,13 +1,13 @@
 /**
  * Head Chef Service
  * Encapsulates API calls for the Head Chef dashboard:
- *  - Fetching order items by account (GET /api/OrderItem/by-account)
- *  - Fetching available chefs (GET /api/Chef/available)
- *  - Updating order item status (PUT /api/OrderItem/Update-Status)
+ * - Fetching order items by account (GET /api/OrderItem/by-account)
+ * - Fetching available chefs (GET /api/Chef/available)
+ * - Updating order item status (PUT /api/OrderItem/Update-Status)
  */
 
 import { API_ENDPOINTS } from "@/lib/api-config";
-import { httpClient } from "@/lib/http-client";
+import { httpClient } from "@/lib/http-client"; // Cân nhắc xóa nếu file không còn dùng đến httpClient
 import { getToken } from "@/lib/auth";
 
 // ==================== TYPES ====================

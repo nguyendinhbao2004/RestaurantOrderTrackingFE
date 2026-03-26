@@ -62,10 +62,7 @@ import {
   consumeCashierCheckInNotice,
 } from "@/services/work-schedule.service";
 import { formatCurrency, mapProductsToMenuItems } from "@/lib/helpers";
-import {
-  usePaymentSuccessSignalR,
-  type PaymentMessage,
-} from "@/hooks/usePaymentSuccessSignalR";
+import { usePaymentSuccessSignalR, type PaymentMessage,} from "@/hooks/usePaymentSuccessSignalR";
 import { MenuItem, Category } from "@/types";
 
 /* ─────────────────────── Types ─────────────────────── */

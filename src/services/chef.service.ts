@@ -1,7 +1,7 @@
 /**
  * Chef Service
  * Encapsulates API calls for the Chef (KDS) dashboard:
- *  - Fetching all order items (pending queue)
+ * - Fetching all order items (pending queue)
  */
 
 import { API_ENDPOINTS } from "@/lib/api-config";

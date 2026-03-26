@@ -12,7 +12,9 @@ import {
 import {
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+
 import { getAccounts, createAccount, AccountListItem } from "@/services/admin-account.service";
+import { getAreas } from "@/services/area.service";
 
 const ROLE_OPTIONS = [
     { label: "Admin", value: 1 },
@@ -30,6 +32,7 @@ const ROLE_COLORS: Record<string, string> = {
     Cashier: "bg-emerald-500",
 };
 
+
 export default function EmployeesPage() {
     const [employees, setEmployees] = useState<AccountListItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -40,12 +43,23 @@ export default function EmployeesPage() {
     const [search, setSearch] = useState("");
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<any>({
         userName: "", fullName: "", phone: "", password: "", image: "", roleId: "2",
+        skillLevel: "", specialty: "", areaId: ""
     });
     const [isSaving, setIsSaving] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
+    const [areas, setAreas] = useState<{ id: string; name: string }[]>([]);
+
+    // Lấy danh sách khu vực khi mở dialog và chọn waiter
+    useEffect(() => {
+        if (isDialogOpen && formData.roleId === "2") {
+            getAreas().then(res => {
+                setAreas(res.data || []);
+            });
+        }
+    }, [isDialogOpen, formData.roleId]);
 
     const loadEmployees = async () => {
         try {
@@ -65,7 +79,7 @@ export default function EmployeesPage() {
     useEffect(() => { loadEmployees(); }, [page, search]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const openCreate = () => {
-        setFormData({ userName: "", fullName: "", phone: "", password: "", image: "", roleId: "2" });
+        setFormData({ userName: "", fullName: "", phone: "", password: "", image: "", roleId: "2", skillLevel: "", specialty: "", areaId: "" });
         setFormError(null);
         setSuccessMsg(null);
         setIsDialogOpen(true);
@@ -75,19 +89,59 @@ export default function EmployeesPage() {
         if (!formData.userName.trim()) { setFormError("Tên tài khoản không được để trống."); return; }
         if (!formData.fullName.trim()) { setFormError("Họ tên không được để trống."); return; }
         if (!formData.password) { setFormError("Mật khẩu không được để trống."); return; }
+        // Validate theo role
+        if (formData.roleId === "2" && !formData.areaId) { setFormError("Vui lòng chọn khu vực cho nhân viên phục vụ."); return; }
+        if ((formData.roleId === "3" || formData.roleId === "4") && !formData.skillLevel) { setFormError("Vui lòng nhập trình độ kỹ năng cho bếp."); return; }
+
         setIsSaving(true);
         setFormError(null);
         try {
-            await createAccount({
-                userName: formData.userName,
-                fullName: formData.fullName,
-                phone: formData.phone,
-                password: formData.password,
-                image: formData.image || undefined,
-                roleId: Number(formData.roleId),
-            });
+            // Tùy role gửi đúng data
+            let payload: any = {};
+            if (formData.roleId === "1" || formData.roleId === "5") {
+                // Admin, Cashier
+                payload = {
+                    userName: formData.userName,
+                    fullName: formData.fullName,
+                    phone: formData.phone,
+                    password: formData.password,
+                    image: formData.image || undefined,
+                    roleId: Number(formData.roleId),
+                };
+            } else if (formData.roleId === "3") {
+                // Chef
+                payload = {
+                    userName: formData.userName,
+                    fullName: formData.fullName,
+                    img: formData.image || undefined,
+                    phone: formData.phone,
+                    password: formData.password,
+                    skillLevel: formData.skillLevel,
+                };
+            } else if (formData.roleId === "4") {
+                // Head Chef
+                payload = {
+                    userName: formData.userName,
+                    fullName: formData.fullName,
+                    img: formData.image || undefined,
+                    phone: formData.phone,
+                    password: formData.password,
+                    skillLevel: formData.skillLevel,
+                };
+            } else if (formData.roleId === "2") {
+                // Waiter
+                payload = {
+                    userName: formData.userName,
+                    fullName: formData.fullName,
+                    img: formData.image || undefined,
+                    phone: formData.phone,
+                    password: formData.password,
+                    areaId: formData.areaId,
+                };
+            }
+            await createAccount(payload);
             setSuccessMsg(`Đã tạo tài khoản ${formData.fullName} thành công!`);
-            setFormData({ userName: "", fullName: "", phone: "", password: "", image: "", roleId: "2" });
+            setFormData({ userName: "", fullName: "", phone: "", password: "", image: "", roleId: "2", skillLevel: "", specialty: "", areaId: "" });
             loadEmployees();
         } catch (e: unknown) {
             setFormError((e as { message?: string })?.message ?? "Có lỗi xảy ra khi tạo tài khoản.");
@@ -218,7 +272,8 @@ export default function EmployeesPage() {
                         <div>
                             <label className="text-sm font-medium mb-2 block">Vai trò <span className="text-destructive">*</span></label>
                             <Select value={formData.roleId} onValueChange={(v) => setFormData({ ...formData, roleId: v })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectTrigger><SelectValue />
+                                </SelectTrigger>
                                 <SelectContent>
                                     {ROLE_OPTIONS.map((r) => <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>)}
                                 </SelectContent>
@@ -228,6 +283,46 @@ export default function EmployeesPage() {
                             <label className="text-sm font-medium mb-2 block">URL ảnh đại diện</label>
                             <Input value={formData.image} onChange={(e) => setFormData({ ...formData, image: e.target.value })} placeholder="https://..." />
                         </div>
+
+                        {/* Trường riêng cho Chef */}
+                        {formData.roleId === "3" && (
+                            <>
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">Trình độ kỹ năng <span className="text-destructive">*</span></label>
+                                    <Input value={formData.skillLevel} onChange={(e) => setFormData({ ...formData, skillLevel: e.target.value })} placeholder="VD: Cao, Trung bình, ..." />
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">Chuyên môn <span className="text-destructive">*</span></label>
+                                    <Select value={formData.specialty} onValueChange={(v) => setFormData({ ...formData, specialty: v })}>
+                                        <SelectTrigger><SelectValue placeholder="Chọn chuyên môn" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="2">Món Á</SelectItem>
+                                            <SelectItem value="3">Món Tây</SelectItem>
+                                            <SelectItem value="4">Phụ bếp</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </>
+                        )}
+                        {/* Trường riêng cho Head Chef */}
+                        {formData.roleId === "4" && (
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">Trình độ kỹ năng <span className="text-destructive">*</span></label>
+                                <Input value={formData.skillLevel} onChange={(e) => setFormData({ ...formData, skillLevel: e.target.value })} placeholder="VD: Cao, Trung bình, ..." />
+                            </div>
+                        )}
+                        {/* Trường riêng cho Waiter */}
+                        {formData.roleId === "2" && (
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">Khu vực phục vụ <span className="text-destructive">*</span></label>
+                                <Select value={formData.areaId} onValueChange={(v) => setFormData({ ...formData, areaId: v })}>
+                                    <SelectTrigger><SelectValue placeholder="Chọn khu vực" /></SelectTrigger>
+                                    <SelectContent>
+                                        {areas.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Đóng</Button>
