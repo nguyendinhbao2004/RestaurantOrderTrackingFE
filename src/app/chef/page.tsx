@@ -20,6 +20,7 @@ import {
   updateOrderItemStatus,
   type ChefOrderItem,
 } from "@/services/chef.service";
+import { getOrderById, updateOrderStatus } from "@/services/order.service";
 
 interface QueueItem {
   id: string; // id của item
@@ -33,6 +34,9 @@ interface QueueItem {
   createdBy: string | null;
   createdByName: string | null;
   quantity: number;
+  tableNumber: string | null;
+  areaName: string | null;
+  orderType: string | null;
 }
 
 const statusLabelMap: Record<string, string> = {
@@ -200,6 +204,9 @@ export default function ChefPage() {
           createdBy: item.createdBy,
           createdByName: item.createdByName,
           quantity: 1,
+          tableNumber: item.tableNumber,
+          areaName: item.areaName,
+          orderType: item.orderType,
         },
         rawItems: [item],
         noteEntries: item.note
@@ -249,6 +256,22 @@ export default function ChefPage() {
       // Xóa item đó ra khỏi danh sách local
       setItems((prev) => prev.filter((i) => i.id !== targetId));
       if (res?.message) showToast(res.message);
+
+      if (item.orderType === "TakeAway") {
+        try {
+          const orderRes = await getOrderById(item.orderId);
+          if (orderRes.data && orderRes.data.orderItems) {
+            const allReady = orderRes.data.orderItems.every(
+              (oi) => oi.status === "Ready" || String(oi.status) === "3"
+            );
+            if (allReady) {
+              await updateOrderStatus({ id: item.orderId, newStatus: 4 });
+            }
+          }
+        } catch (err) {
+          console.error("Lỗi cập nhật trạng thái đơn hàng TakeAway:", err);
+        }
+      }
     } catch (err) {
       console.error("Lỗi khi cập nhật trạng thái xong 1 phần:", err);
     } finally {
@@ -280,6 +303,22 @@ export default function ChefPage() {
       const idSet = new Set(ids);
       setItems((prev) => prev.filter((i) => !idSet.has(i.id)));
       if (res?.message) showToast(res.message);
+
+      if (item.orderType === "TakeAway") {
+        try {
+          const orderRes = await getOrderById(item.orderId);
+          if (orderRes.data && orderRes.data.orderItems) {
+            const allReady = orderRes.data.orderItems.every(
+              (oi) => oi.status === "Ready" || String(oi.status) === "3"
+            );
+            if (allReady) {
+              await updateOrderStatus({ id: item.orderId, newStatus: 4 });
+            }
+          }
+        } catch (err) {
+          console.error("Lỗi cập nhật trạng thái đơn hàng TakeAway:", err);
+        }
+      }
     } catch (err) {
       console.error("Lỗi khi cập nhật trạng thái xong tất cả:", err);
     } finally {
@@ -417,6 +456,50 @@ export default function ChefPage() {
                       </div>
                     )}
                     <div className="flex flex-wrap items-center gap-1.5">
+                      {/* Order type badge */}
+                      {item.orderType && (
+                        <Badge
+                          variant="outline"
+                          className={`rounded-lg px-2 py-0.5 text-xs font-semibold ${
+                            item.orderType === "Delivery"
+                              ? "border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-950/40 dark:text-blue-300"
+                              : item.orderType === "TakeAway"
+                                ? "border-purple-400 bg-purple-50 text-purple-700 dark:border-purple-600 dark:bg-purple-950/40 dark:text-purple-300"
+                                : "border-green-400 bg-green-50 text-green-700 dark:border-green-600 dark:bg-green-950/40 dark:text-green-300"
+                          }`}
+                        >
+                          {item.orderType === "Delivery"
+                            ? "Giao hàng"
+                            : item.orderType === "TakeAway"
+                              ? "Mang về"
+                              : "Tại bàn"}
+                        </Badge>
+                      )}
+                      {/* Table / Area badges */}
+                      {item.areaName && (
+                        <Badge
+                          variant="outline"
+                          className="rounded-lg px-2 py-0.5 text-xs"
+                        >
+                          {item.areaName}
+                        </Badge>
+                      )}
+                      {item.tableNumber && (
+                        <Badge
+                          variant="secondary"
+                          className="rounded-lg px-2 py-0.5 text-xs font-bold"
+                        >
+                          Bàn {item.tableNumber}
+                        </Badge>
+                      )}
+                      {!item.tableNumber && !item.areaName && (
+                        <Badge
+                          variant="outline"
+                          className="rounded-lg px-2 py-0.5 text-xs text-muted-foreground"
+                        >
+                          Không có bàn
+                        </Badge>
+                      )}
                       {item.quantity === 1 && (
                         <Badge
                           variant="outline"

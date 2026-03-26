@@ -32,6 +32,11 @@ import {
   RefreshCw,
   UtensilsCrossed,
   Receipt,
+  ShoppingBag,
+  MapPin,
+  Phone,
+  User,
+  Package,
 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -62,7 +67,11 @@ import {
   consumeCashierCheckInNotice,
 } from "@/services/work-schedule.service";
 import { formatCurrency, mapProductsToMenuItems } from "@/lib/helpers";
-import { usePaymentSuccessSignalR, type PaymentMessage,} from "@/hooks/usePaymentSuccessSignalR";
+import {
+  usePaymentSuccessSignalR,
+  type PaymentMessage,
+} from "@/hooks/usePaymentSuccessSignalR";
+import { API_ENDPOINTS } from "@/lib/api-config";
 import { MenuItem, Category } from "@/types";
 
 /* ─────────────────────── Types ─────────────────────── */
@@ -103,6 +112,40 @@ interface CartItem {
   quantity: number;
 }
 
+/* ── Online / Delivery order types ── */
+interface DeliveryOrderSummary {
+  id: string;
+  tableNumber: string | null;
+  status: string;
+  orderType: string;
+}
+
+interface DeliveryOrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  productName: string;
+  productPrice: number;
+  chefName: string | null;
+  waiterName: string | null;
+  orderChannel: string;
+  note: string | null;
+  status: string;
+  createdAt: string;
+}
+
+interface DeliveryOrderDetail {
+  id: string;
+  orderType: string;
+  status: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  customerAddress: string | null;
+  createdAt: string;
+  orderItems: DeliveryOrderItem[];
+}
+
+type PageMode = "dineIn" | "takeAway" | "online";
 type PaymentMethod = "cash" | "bank";
 type CopyField = "accountNumber" | "amount" | "description";
 
@@ -110,10 +153,7 @@ const TABLE_PAGE_SIZE = 18;
 const TABLE_GRID_SLOT_COUNT = 18;
 const MENU_PAGE_SIZE = 6;
 const DEFAULT_PAYMENT_ORDER_STATUS = 4;
-const ORDER_TYPE_TOGGLE_OPTIONS = [
-  { value: ApiOrderType.DineIn, label: "TẠI CHỖ" },
-  { value: ApiOrderType.TakeAway, label: "MANG VỀ" },
-] as const;
+const ONLINE_ORDER_PAGE_SIZE = 10;
 
 /* ─────────────────────── Helpers ─────────────────────── */
 
@@ -321,6 +361,9 @@ export default function CashierPOSPage() {
   const { user, logout, isAuthenticated } = useAuth();
   const { findBankByBin } = useBanks();
 
+  /* ── Page mode ── */
+  const [pageMode, setPageMode] = useState<PageMode>("dineIn");
+
   /* ── Tables ── */
   const [tables, setTables] = useState<ApiTable[]>([]);
   const [tablesLoading, setTablesLoading] = useState(true);
@@ -336,6 +379,19 @@ export default function CashierPOSPage() {
   const [tableDetail, setTableDetail] = useState<TableDetail | null>(null);
   const [tableDetailLoading, setTableDetailLoading] = useState(false);
 
+  /* ── Delivery / Online Orders ── */
+  const [deliveryOrders, setDeliveryOrders] = useState<DeliveryOrderSummary[]>(
+    [],
+  );
+  const [deliveryLoading, setDeliveryLoading] = useState(false);
+  const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [deliveryPage, setDeliveryPage] = useState(1);
+  const [deliveryTotalPages, setDeliveryTotalPages] = useState(1);
+  const [selectedDeliveryOrder, setSelectedDeliveryOrder] =
+    useState<DeliveryOrderDetail | null>(null);
+  const [deliveryDetailLoading, setDeliveryDetailLoading] = useState(false);
+  const [isConfirmingDeliveryOrder, setIsConfirmingDeliveryOrder] = useState(false);
+
   /* ── Menu ── */
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuLoading, setMenuLoading] = useState(true);
@@ -347,7 +403,9 @@ export default function CashierPOSPage() {
 
   /* ── Cart ── */
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [orderType, setOrderType] = useState<ApiOrderType>(ApiOrderType.DineIn);
+  // Derive ApiOrderType from pageMode (online mode falls back to DineIn for table orders)
+  const orderType =
+    pageMode === "takeAway" ? ApiOrderType.TakeAway : ApiOrderType.DineIn;
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [saveOrderError, setSaveOrderError] = useState<string | null>(null);
   const [isAddingItemsMode, setIsAddingItemsMode] = useState(false);
@@ -459,10 +517,11 @@ export default function CashierPOSPage() {
       .toLowerCase();
     const normalizedOrderStatus = activeOrder.status.trim().toLowerCase();
 
-    return (
-      normalizedOrderType === "takeaway" &&
-      normalizedOrderStatus === "confirmed"
-    );
+    if (normalizedOrderType === "takeaway") {
+      return normalizedOrderStatus !== "paying";
+    }
+
+    return false;
   }, [activeOrder]);
 
   const cashChange = useMemo(() => {
@@ -519,6 +578,73 @@ export default function CashierPOSPage() {
   useEffect(() => {
     loadTables();
   }, [loadTables]);
+
+  /* ─── Load Delivery orders ─── */
+  const loadDeliveryOrders = useCallback(async () => {
+    setDeliveryLoading(true);
+    setDeliveryError(null);
+    try {
+      const url = `${API_ENDPOINTS.orders.list}?pageIndex=${deliveryPage}&pageSize=${ONLINE_ORDER_PAGE_SIZE}`;
+      const res = await fetch(url, { credentials: "include" });
+      const json = await res.json();
+      const allOrders: DeliveryOrderSummary[] = json.data ?? [];
+      setDeliveryOrders(allOrders.filter((o) => o.orderType === "Delivery"));
+      const pagination = json.meta?.pagination;
+      if (pagination) setDeliveryTotalPages(pagination.totalPages);
+    } catch {
+      setDeliveryError("Không thể tải danh sách đơn online.");
+    } finally {
+      setDeliveryLoading(false);
+    }
+  }, [deliveryPage]);
+
+  useEffect(() => {
+    if (pageMode === "online") loadDeliveryOrders();
+  }, [pageMode, loadDeliveryOrders]);
+
+  /* ─── Load Delivery order detail ─── */
+  const handleSelectDeliveryOrder = useCallback(async (orderId: string) => {
+    setDeliveryDetailLoading(true);
+    setSelectedDeliveryOrder(null);
+    try {
+      const url = `${API_ENDPOINTS.orders.detail(orderId)}`;
+      const res = await fetch(url, { credentials: "include" });
+      const json = await res.json();
+      const d = json.data;
+      setSelectedDeliveryOrder({
+        id: d.id,
+        orderType: d.orderType,
+        status: d.status,
+        customerName: d.customerName ?? null,
+        customerPhone: d.customerPhone ?? null,
+        customerAddress: d.customerAddress ?? null,
+        createdAt: d.createdAt,
+        orderItems: Array.isArray(d.orderItems) ? d.orderItems : [],
+      });
+    } catch {
+      setSelectedDeliveryOrder(null);
+    } finally {
+      setDeliveryDetailLoading(false);
+    }
+  }, []);
+
+  /* ─── Confirm Delivery Order ─── */
+  const handleConfirmDeliveryOrder = async (orderId: string) => {
+    setIsConfirmingDeliveryOrder(true);
+    try {
+      await updateOrderStatus({
+        id: orderId,
+        newStatus: 1, // 1 = Confirmed
+      });
+      // reload lists and detail
+      await loadDeliveryOrders();
+      await handleSelectDeliveryOrder(orderId);
+    } catch (error) {
+      console.error("Failed to confirm order", error);
+    } finally {
+      setIsConfirmingDeliveryOrder(false);
+    }
+  };
 
   /* ─── Load menu products ─── */
   const loadMenu = useCallback(async () => {
@@ -708,7 +834,7 @@ export default function CashierPOSPage() {
     setShowPaymentModal(true);
   }, []);
 
-  const preparePaymentFlow = useCallback(async (orderId: string) => {
+  const preparePaymentFlow = useCallback(async (orderId: string, orderType?: string) => {
     const paymentInfoRes = await getPaymentInfoByOrderId(orderId);
     const paymentInfoData: PaymentInfoByOrderData = paymentInfoRes.data;
     const currentBillId = paymentInfoData.billId?.trim() || "";
@@ -719,10 +845,12 @@ export default function CashierPOSPage() {
     if (!paymentInfoData.paymentMetadata) {
       setPaymentLinkData(null);
       setPaymentMethod("cash");
-      await updateOrderStatus({
-        id: orderId,
-        newStatus: DEFAULT_PAYMENT_ORDER_STATUS,
-      });
+      if (orderType !== "TakeAway") {
+        await updateOrderStatus({
+          id: orderId,
+          newStatus: DEFAULT_PAYMENT_ORDER_STATUS,
+        });
+      }
       return;
     }
 
@@ -750,7 +878,7 @@ export default function CashierPOSPage() {
     setIsCheckingPaymentInfo(true);
 
     try {
-      await preparePaymentFlow(activeOrder.id);
+      await preparePaymentFlow(activeOrder.id, activeOrder.orderType);
     } catch (error) {
       setPaymentError(
         getApiErrorMessage(
@@ -796,10 +924,12 @@ export default function CashierPOSPage() {
     try {
       let nextBillId = billId.trim();
       if (!nextBillId) {
-        await updateOrderStatus({
-          id: orderId,
-          newStatus: DEFAULT_PAYMENT_ORDER_STATUS,
-        });
+        if (activeOrder.orderType !== "TakeAway") {
+          await updateOrderStatus({
+            id: orderId,
+            newStatus: DEFAULT_PAYMENT_ORDER_STATUS,
+          });
+        }
 
         const billRes = await createBill({
           orderId,
@@ -1030,14 +1160,27 @@ export default function CashierPOSPage() {
             </div>
 
             <div className="inline-flex items-center rounded-2xl bg-stone-200 dark:bg-stone-800 p-1 ml-1">
-              {ORDER_TYPE_TOGGLE_OPTIONS.map((option) => {
-                const isActive = orderType === option.value;
+              {[
+                { mode: "dineIn" as PageMode, label: "TẠI CHỖ" },
+                { mode: "takeAway" as PageMode, label: "MANG VỀ" },
+                { mode: "online" as PageMode, label: "ĐƠN ONLINE" },
+              ].map((option) => {
+                const isActive = pageMode === option.mode;
                 return (
                   <button
-                    key={option.value}
+                    key={option.mode}
                     type="button"
                     aria-pressed={isActive}
-                    onClick={() => setOrderType(option.value)}
+                    onClick={() => {
+                      setPageMode(option.mode);
+                      if (option.mode !== "online") {
+                        setSelectedDeliveryOrder(null);
+                      } else {
+                        setSelectedTable(null);
+                        setTableDetail(null);
+                        setCart([]);
+                      }
+                    }}
                     className={`h-10 px-4 sm:px-6 rounded-xl text-sm font-bold tracking-wide transition-all ${
                       isActive
                         ? "bg-orange-500 text-white shadow-sm shadow-orange-500/30"
@@ -1055,7 +1198,7 @@ export default function CashierPOSPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={loadTables}
+              onClick={pageMode === "online" ? loadDeliveryOrders : loadTables}
               className="text-muted-foreground"
             >
               <RefreshCw className="w-4 h-4 sm:mr-1.5" />
@@ -1071,7 +1214,143 @@ export default function CashierPOSPage() {
 
       {/* ── 2-column body ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
-        {!isAddingItemsMode ? (
+        {pageMode === "online" ? (
+          /* ════ ONLINE DELIVERY ORDERS PANEL ════ */
+          <div className="flex-1 min-w-[260px] flex flex-col border-r border-border bg-white dark:bg-stone-900">
+            <div className="px-3 py-3 border-b border-border flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-bold text-stone-700 dark:text-stone-200">
+                  Đơn Giao Hàng Online
+                </h2>
+                <button
+                  onClick={loadDeliveryOrders}
+                  className="text-xs text-orange-600 hover:text-orange-700 flex items-center gap-1 font-medium"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Tải lại
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Danh sách các đơn hàng Delivery đang chờ xử lý
+              </p>
+            </div>
+
+            <ScrollArea className="flex-1">
+              {deliveryLoading ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                  <p className="text-xs text-muted-foreground">
+                    Đang tải đơn online...
+                  </p>
+                </div>
+              ) : deliveryError ? (
+                <div className="p-4 text-center">
+                  <AlertCircle className="w-8 h-8 text-destructive mx-auto mb-2" />
+                  <p className="text-xs text-destructive">{deliveryError}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 text-xs"
+                    onClick={loadDeliveryOrders}
+                  >
+                    Thử lại
+                  </Button>
+                </div>
+              ) : deliveryOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center mb-3">
+                    <ShoppingBag className="w-7 h-7 text-orange-400" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Không có đơn giao hàng
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Hiện chưa có đơn Delivery nào
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 space-y-2">
+                  {deliveryOrders.map((order) => {
+                    const isSelected = selectedDeliveryOrder?.id === order.id;
+                    const isPending = order.status === "Pending";
+                    return (
+                      <button
+                        key={order.id}
+                        onClick={() => handleSelectDeliveryOrder(order.id)}
+                        className={`w-full text-left rounded-xl border-2 p-3 transition-all hover:shadow-md ${
+                          isSelected
+                            ? "border-orange-500 bg-orange-50 dark:bg-orange-950/20 shadow-md shadow-orange-100/50"
+                            : "border-border bg-stone-50 dark:bg-stone-800/60 hover:border-orange-300"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                isSelected
+                                  ? "bg-orange-500"
+                                  : "bg-orange-100 dark:bg-orange-900/30"
+                              }`}
+                            >
+                              <Package
+                                className={`w-4 h-4 ${isSelected ? "text-white" : "text-orange-500"}`}
+                              />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-stone-800 dark:text-stone-100">
+                                Đơn #{order.id.slice(-8).toUpperCase()}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground">
+                                Giao hàng
+                              </p>
+                            </div>
+                          </div>
+                          <span
+                            className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                              isPending
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                                : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                            }`}
+                          >
+                            {isPending ? "Chờ xử lý" : order.status}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </ScrollArea>
+
+            {deliveryTotalPages > 1 && (
+              <div className="px-3 pb-3 flex items-center justify-center gap-1 border-t border-border pt-2 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  onClick={() => setDeliveryPage((p) => Math.max(1, p - 1))}
+                  disabled={deliveryPage === 1}
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
+                <span className="text-xs text-muted-foreground px-1">
+                  {deliveryPage}/{deliveryTotalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  onClick={() =>
+                    setDeliveryPage((p) => Math.min(deliveryTotalPages, p + 1))
+                  }
+                  disabled={deliveryPage === deliveryTotalPages}
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : !isAddingItemsMode ? (
           <div className="flex-1 min-w-[260px] flex flex-col border-r border-border bg-white dark:bg-stone-900">
             <div className="px-3 py-3 border-b border-border flex-shrink-0 sticky top-0 z-10 bg-white dark:bg-stone-900">
               <div className="mb-2 flex items-center justify-between gap-2">
@@ -1371,7 +1650,35 @@ export default function CashierPOSPage() {
         <div className="w-[26%] min-w-[240px] flex flex-col border-l border-border bg-white dark:bg-stone-900">
           {/* Cart header */}
           <div className="px-4 py-3 border-b border-border flex-shrink-0 space-y-2.5">
-            {selectedTable ? (
+            {pageMode === "online" ? (
+              /* Online order header */
+              selectedDeliveryOrder ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                      <Package className="w-4 h-4 text-orange-500" />
+                    </div>
+                    <h2 className="text-sm font-bold text-stone-800 dark:text-stone-100">
+                      Đơn #{selectedDeliveryOrder.id.slice(-8).toUpperCase()}
+                    </h2>
+                  </div>
+                  <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                    {selectedDeliveryOrder.status === "Pending"
+                      ? "Chờ xử lý"
+                      : selectedDeliveryOrder.status}
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <h2 className="text-sm font-bold text-muted-foreground">
+                    Chưa chọn đơn
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Click vào một đơn để xem chi tiết
+                  </p>
+                </div>
+              )
+            ) : selectedTable ? (
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h2 className="text-base font-bold text-stone-800 dark:text-stone-100">
@@ -1408,7 +1715,142 @@ export default function CashierPOSPage() {
 
           {/* Cart items */}
           <ScrollArea className="flex-1 min-h-0">
-            {tableDetailLoading ? (
+            {pageMode === "online" ? (
+              /* ── Delivery order detail view ── */
+              deliveryDetailLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+                </div>
+              ) : !selectedDeliveryOrder ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center mb-3">
+                    <ShoppingBag className="w-7 h-7 text-orange-400" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Chưa chọn đơn
+                  </p>
+                </div>
+              ) : (
+                <div className="px-3 py-3 space-y-3">
+                  {/* Customer info */}
+                  <div className="rounded-xl border border-border bg-stone-50 dark:bg-stone-800/60 p-3 space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                      Thông tin khách
+                    </p>
+                    {selectedDeliveryOrder.customerName && (
+                      <div className="flex items-center gap-2">
+                        <User className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                        <span className="text-xs font-medium">
+                          {selectedDeliveryOrder.customerName}
+                        </span>
+                      </div>
+                    )}
+                    {selectedDeliveryOrder.customerPhone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                        <span className="text-xs">
+                          {selectedDeliveryOrder.customerPhone}
+                        </span>
+                      </div>
+                    )}
+                    {selectedDeliveryOrder.customerAddress && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-orange-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-xs leading-snug">
+                          {selectedDeliveryOrder.customerAddress}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Items */}
+                  <p className="px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Món ăn ({selectedDeliveryOrder.orderItems.length})
+                  </p>
+                  {selectedDeliveryOrder.orderItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-start gap-2 p-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-border"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                        <UtensilsCrossed className="w-4 h-4 text-orange-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold truncate">
+                          {item.productName}
+                        </p>
+                        <p className="text-xs text-orange-600 font-bold">
+                          {formatCurrency(item.productPrice)}
+                        </p>
+                        {item.note && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5 italic">
+                            Note: {item.note}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                              item.status === "Served"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : item.status === "Pending"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : item.status === "Cooking"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : item.status === "Confirmed"
+                                      ? "bg-violet-100 text-violet-700"
+                                      : "bg-stone-100 text-stone-600"
+                            }`}
+                          >
+                            {item.status === "Served"
+                              ? "Đã phục vụ"
+                              : item.status === "Pending"
+                                ? "Chờ"
+                                : item.status === "Cooking"
+                                  ? "Đang nấu"
+                                  : item.status === "Confirmed"
+                                    ? "Đã xác nhận"
+                                    : item.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Total */}
+                  <div className="flex items-center justify-between border-t border-border pt-3">
+                    <span className="text-xs text-muted-foreground">
+                      Tổng cộng
+                    </span>
+                    <span className="text-base font-bold text-orange-600">
+                      {formatCurrency(
+                        selectedDeliveryOrder.orderItems.reduce(
+                          (sum, i) => sum + i.productPrice,
+                          0,
+                        ),
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Confirm Order Button */}
+                  {selectedDeliveryOrder.status === "Pending" && (
+                    <Button
+                      className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold"
+                      disabled={isConfirmingDeliveryOrder}
+                      onClick={() => handleConfirmDeliveryOrder(selectedDeliveryOrder.id)}
+                    >
+                      {isConfirmingDeliveryOrder ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ĐANG XÁC NHẬN...
+                        </>
+                      ) : (
+                        "XÁC NHẬN ĐƠN"
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )
+            ) : tableDetailLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
               </div>
@@ -1547,8 +1989,8 @@ export default function CashierPOSPage() {
             )}
           </ScrollArea>
 
-          {/* Footer */}
-          {selectedTable && (
+          {/* Footer – only show for table modes */}
+          {pageMode !== "online" && !!selectedTable && (
             <div className="border-t border-border px-4 py-3 flex-shrink-0 space-y-3">
               {/* Total */}
               <div className="flex items-center justify-between">
