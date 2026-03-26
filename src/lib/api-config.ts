@@ -7,7 +7,6 @@
 const RAW_API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL || "https://localhost:7260";
 
-
 export const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");
 
 // ==================== AUTH ====================
@@ -47,6 +46,20 @@ export const API_ENDPOINTS = {
         updateStatus: `${API_BASE_URL}/api/Order/Update-Status`,
     },
 
+    // ==================== ORDER ITEMS ====================
+    orderItems: {
+        list: (pageIndex: number, pageSize: number) =>
+            `${API_BASE_URL}/api/OrderItem?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+        confirmed: (pageIndex: number, pageSize: number) =>
+            `${API_BASE_URL}/api/OrderItem/confirmed?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+        assignChef: `${API_BASE_URL}/api/OrderItem/assign-chef`,
+    },
+
+    // ==================== HEAD CHEF ====================
+    headChef: {
+        availableChefs: `${API_BASE_URL}/api/Chef/available`,
+    },
+
     // ==================== PAYMENTS ====================
     payments: {
         createLink: `${API_BASE_URL}/api/Payment/create-link`,
@@ -61,18 +74,49 @@ export const API_ENDPOINTS = {
 
     // ==================== WORK SCHEDULE ====================
     workSchedule: {
-        checkIn: (accountId: string) => `${API_BASE_URL}/api/WorkSchedule/CheckIn/${accountId}`,
+        list: `${API_BASE_URL}/api/WorkSchedule`,
+        create: `${API_BASE_URL}/api/WorkSchedule`,
+        update: `${API_BASE_URL}/api/WorkSchedule`,
+        delete: (id: string) => `${API_BASE_URL}/api/WorkSchedule/${id}`,
+        checkIn: (id: string) => `${API_BASE_URL}/api/WorkSchedule/CheckIn/${id}`,
+        checkOut: (id: string) => `${API_BASE_URL}/api/WorkSchedule/CheckOut/${id}`,
     },
 
     // ==================== TABLES ====================
     tables: {
         list: `${API_BASE_URL}/api/Table`,
+        create: `${API_BASE_URL}/api/Table`,
         detail: (id: string) => `${API_BASE_URL}/api/Table/${id}`,
         byArea: (areaId: string) => `${API_BASE_URL}/api/Table/area/${areaId}`,
+        updateInfo: `${API_BASE_URL}/api/Table/update-info`,
+        updateStatus: `${API_BASE_URL}/api/Table/update-status`,
         qrSession: (tableId: string) => `${API_BASE_URL}/api/Table/qr-session/${tableId}`,
         refreshQrSession: (tableId: string) => `${API_BASE_URL}/api/Table/qr-session/${tableId}/refresh`,
         bySession: (session: string) => `${API_BASE_URL}/api/Table/by-session/${session}`,
-        updateStatus: `${API_BASE_URL}/api/Table/update-status`,
+    },
+
+    // ==================== AREAS ====================
+    areas: {
+        list: `${API_BASE_URL}/api/Area`,
+        create: `${API_BASE_URL}/api/Area`,
+        update: `${API_BASE_URL}/api/Area`,
+        delete: (id: string) => `${API_BASE_URL}/api/Area/${id}`,
+    },
+
+    // ==================== ADMIN CATEGORIES ====================
+    adminCategories: {
+        list: `${API_BASE_URL}/api/Category`,
+        create: `${API_BASE_URL}/api/Category`,
+        update: `${API_BASE_URL}/api/Category`,
+        delete: (id: number) => `${API_BASE_URL}/api/Category/${id}`,
+    },
+
+    // ==================== ADMIN PRODUCTS ====================
+    adminProducts: {
+        list: `${API_BASE_URL}/api/Product`,
+        create: `${API_BASE_URL}/api/Product`,
+        updateInfo: `${API_BASE_URL}/api/Product/Update-Info`,
+        updateStatus: (id: string) => `${API_BASE_URL}/api/Product/Update-Status/${id}`,
     },
 
     // ==================== EMPLOYEES ====================
@@ -89,6 +133,16 @@ export const API_ENDPOINTS = {
     // ==================== ACCOUNTS ====================
     accounts: {
         list: `${API_BASE_URL}/api/Account`,
+        employeesByRole: `${API_BASE_URL}/api/Account/employees/by-role`,
+        createAccount: `${API_BASE_URL}/api/Auth/CreateAccount`,
+        createWaiter: `${API_BASE_URL}/api/Auth/CreateWaiter`,
+        createChef: `${API_BASE_URL}/api/Auth/CreateChef`,
+        createHeadChef: `${API_BASE_URL}/api/Auth/CreateHeadChef`,
+    },
+
+    // ==================== DASHBOARD ====================
+    dashboard: {
+        summary: `${API_BASE_URL}/api/Dashboard/summary`,
     },
 
     // ==================== BANKS ====================

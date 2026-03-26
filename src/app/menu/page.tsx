@@ -10,7 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,} from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   ShoppingCart,
   Search,
@@ -46,10 +52,19 @@ import { useBanks } from "@/contexts/BanksContext";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
 import { fetchCustomerByAccountId } from "@/services/customer.service";
-import { ApiPaymentMethod, PaymentLinkData, buildVietQrImageUrl, createOnlineOrder, createPaymentLink,} from "@/services/online-order.service";
+import {
+  ApiPaymentMethod,
+  PaymentLinkData,
+  buildVietQrImageUrl,
+  createOnlineOrder,
+  createPaymentLink,
+} from "@/services/online-order.service";
 import { mapProductsToMenuItems, formatCurrency } from "@/lib/helpers";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { usePaymentSuccessSignalR, type PaymentMessage,} from "@/hooks/usePaymentSuccessSignalR";
+import {
+  usePaymentSuccessSignalR,
+  type PaymentMessage,
+} from "@/hooks/usePaymentSuccessSignalR";
 
 interface DeliveryInfo {
   name: string;
@@ -110,10 +125,12 @@ export default function MenuPage() {
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [isCreatingPaymentLink, setIsCreatingPaymentLink] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [paymentLinkData, setPaymentLinkData] = useState<PaymentLinkData | null>(null);
+  const [paymentLinkData, setPaymentLinkData] =
+    useState<PaymentLinkData | null>(null);
   const [billId, setBillId] = useState<string>("");
   const [copiedField, setCopiedField] = useState<CopyField | null>(null);
-  const [isAwaitingPaymentConfirmation, setIsAwaitingPaymentConfirmation] = useState(false);
+  const [isAwaitingPaymentConfirmation, setIsAwaitingPaymentConfirmation] =
+    useState(false);
 
   const {
     cart,
@@ -245,7 +262,9 @@ export default function MenuPage() {
     setIsAwaitingPaymentConfirmation(false);
 
     try {
-      const paymentResponse = await createPaymentLink({ billId: currentBillId });
+      const paymentResponse = await createPaymentLink({
+        billId: currentBillId,
+      });
       setPaymentLinkData(paymentResponse.data);
       setOrderCode(paymentResponse.data.orderCode || 0);
     } catch (error) {
@@ -262,7 +281,9 @@ export default function MenuPage() {
 
   const handleSubmitOnlineOrder = useCallback(async () => {
     if (cart.length === 0) {
-      setCheckoutError("Giỏ hàng trống. Vui lòng chọn món trước khi thanh toán.");
+      setCheckoutError(
+        "Giỏ hàng trống. Vui lòng chọn món trước khi thanh toán.",
+      );
       return;
     }
 
@@ -297,7 +318,10 @@ export default function MenuPage() {
       setCheckoutStep("success");
     } catch (error) {
       setCheckoutError(
-        getApiErrorMessage(error, "Không thể tạo đơn online. Vui lòng thử lại."),
+        getApiErrorMessage(
+          error,
+          "Không thể tạo đơn online. Vui lòng thử lại.",
+        ),
       );
     } finally {
       setIsSubmittingOrder(false);
@@ -346,7 +370,9 @@ export default function MenuPage() {
             : 0;
 
       const isMatchedByOrderId =
-        !!incomingOrderId && !!targetOrderId && incomingOrderId === targetOrderId;
+        !!incomingOrderId &&
+        !!targetOrderId &&
+        incomingOrderId === targetOrderId;
       const isMatchedByOrderCode =
         incomingOrderCode > 0 &&
         targetOrderCode > 0 &&
@@ -378,8 +404,8 @@ export default function MenuPage() {
 
   const isDeliveryValid = Boolean(
     deliveryInfo.name.trim() &&
-      deliveryInfo.phone.trim() &&
-      deliveryInfo.address.trim(),
+    deliveryInfo.phone.trim() &&
+    deliveryInfo.address.trim(),
   );
 
   const paymentOptions: {
@@ -455,7 +481,7 @@ export default function MenuPage() {
                 >
                   <Link href="/login">
                     <LogIn className="w-4 h-4 mr-1.5" />
-                    Đăng nhập
+                    Login
                   </Link>
                 </Button>
               ) : (
@@ -798,9 +824,11 @@ export default function MenuPage() {
                 <div className="flex items-center">
                   {(["delivery", "payment", "confirm"] as CheckoutStep[]).map(
                     (step, i) => {
-                      const currentIdx = ["delivery", "payment", "confirm"].indexOf(
-                        checkoutStep,
-                      );
+                      const currentIdx = [
+                        "delivery",
+                        "payment",
+                        "confirm",
+                      ].indexOf(checkoutStep);
                       const isActive = checkoutStep === step;
                       const isDone = i < currentIdx;
 
@@ -859,7 +887,8 @@ export default function MenuPage() {
             <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="px-5 pt-4 pb-3 flex-shrink-0">
                 <p className="text-sm text-muted-foreground">
-                  Mở app ngân hàng bất kỳ để quét VietQR hoặc chuyển khoản đúng nội dung bên dưới.
+                  Mở app ngân hàng bất kỳ để quét VietQR hoặc chuyển khoản đúng
+                  nội dung bên dưới.
                 </p>
               </div>
 
@@ -919,7 +948,8 @@ export default function MenuPage() {
                                 Ngân hàng
                               </p>
                               <p className="font-semibold text-sm truncate">
-                                {selectedBank?.name || `BIN ${paymentLinkData.bin}`}
+                                {selectedBank?.name ||
+                                  `BIN ${paymentLinkData.bin}`}
                               </p>
                             </div>
                           </div>
@@ -1049,8 +1079,8 @@ export default function MenuPage() {
                   <div className="px-5 pt-1 pb-3 flex-shrink-0">
                     <div className="mx-auto w-fit max-w-full rounded-lg border border-amber-200/55 bg-amber-50/45 px-4 py-2">
                       <p className="text-sm text-amber-800/90 leading-snug">
-                        Lưu ý: Vui lòng nhập chính xác số tiền và nội dung chuyển
-                        khoản để hệ thống tự động đối soát.
+                        Lưu ý: Vui lòng nhập chính xác số tiền và nội dung
+                        chuyển khoản để hệ thống tự động đối soát.
                       </p>
                     </div>
                   </div>
@@ -1062,7 +1092,8 @@ export default function MenuPage() {
                     Không thể hiển thị mã QR thanh toán
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {checkoutError || "Bạn có thể thử tạo lại mã QR hoặc quay lại sau."}
+                    {checkoutError ||
+                      "Bạn có thể thử tạo lại mã QR hoặc quay lại sau."}
                   </p>
                 </div>
               )}
@@ -1088,7 +1119,10 @@ export default function MenuPage() {
                       <Input
                         value={deliveryInfo.name}
                         onChange={(e) =>
-                          setDeliveryInfo((d) => ({ ...d, name: e.target.value }))
+                          setDeliveryInfo((d) => ({
+                            ...d,
+                            name: e.target.value,
+                          }))
                         }
                         placeholder="Nhập họ và tên"
                         className="rounded-xl"
@@ -1171,7 +1205,9 @@ export default function MenuPage() {
                         </div>
                         <div className="flex-1">
                           <p className="font-semibold text-sm">{opt.label}</p>
-                          <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {opt.desc}
+                          </p>
                         </div>
                         <div
                           className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -1203,7 +1239,9 @@ export default function MenuPage() {
 
                     <div className="bg-muted/50 rounded-2xl p-5 text-left space-y-3 mb-6">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Mã đơn hàng</span>
+                        <span className="text-muted-foreground">
+                          Mã đơn hàng
+                        </span>
                         <span className="font-mono font-bold">{orderId}</span>
                       </div>
                       <div className="flex justify-between text-sm">
@@ -1214,10 +1252,15 @@ export default function MenuPage() {
                         <span className="font-semibold">30–45 phút</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Thanh toán</span>
+                        <span className="text-muted-foreground">
+                          Thanh toán
+                        </span>
                         <span className="font-medium">
-                          {paymentOptions.find((o) => o.value === paymentMethod)
-                            ?.label}
+                          {
+                            paymentOptions.find(
+                              (o) => o.value === paymentMethod,
+                            )?.label
+                          }
                         </span>
                       </div>
                     </div>

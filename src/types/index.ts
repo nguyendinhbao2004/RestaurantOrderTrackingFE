@@ -1,6 +1,6 @@
 // ==================== ENUMS ====================
 
-export type Role = 'admin' | 'chef' | 'waiter' | 'cashier' | 'customer';
+export type Role = 'admin' | 'chef' | 'headchef' | 'waiter' | 'cashier' | 'customer';
 
 export type OrderStatus = 'pending' | 'cooking' | 'ready' | 'served' | 'cancelled';
 
