@@ -1,17 +1,20 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface VoiceOrderButtonProps {
     isListening: boolean;
     isSupported: boolean;
     onToggle: () => void;
+    className?: string;
 }
 
 export function VoiceOrderButton({
     isListening,
     isSupported,
     onToggle,
+    className,
 }: VoiceOrderButtonProps) {
     if (!isSupported) {
         return (
@@ -19,11 +22,11 @@ export function VoiceOrderButton({
                 variant="outline"
                 size="sm"
                 disabled
-                className="gap-2 opacity-50 cursor-not-allowed"
+                className={cn("w-full sm:w-auto gap-2 opacity-50 cursor-not-allowed", className)}
                 title="Voice ordering is not supported in this browser. Please use Chrome or Edge."
             >
                 <MicOffIcon />
-                <span className="hidden sm:inline text-xs">Voice N/A</span>
+                <span className="text-xs">Voice N/A</span>
             </Button>
         );
     }
@@ -41,14 +44,14 @@ export function VoiceOrderButton({
                 variant={isListening ? "default" : "outline"}
                 size="sm"
                 onClick={onToggle}
-                className={`relative gap-2 transition-all duration-300 ${
+                className={cn(`relative w-full sm:w-auto gap-2 transition-all duration-300 ${
                     isListening
                         ? "bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-lg shadow-red-500/25"
                         : "hover:border-orange-500/50 hover:bg-orange-50 dark:hover:bg-orange-950/30"
-                }`}
+                }`, className)}
             >
                 {isListening ? <MicActiveIcon /> : <MicIcon />}
-                <span className="hidden sm:inline text-xs font-medium">
+                <span className="text-xs font-medium">
                     {isListening ? "Stop" : "Voice Order"}
                 </span>
             </Button>

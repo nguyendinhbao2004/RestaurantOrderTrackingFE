@@ -4,7 +4,13 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  ShoppingCart,
+} from "lucide-react";
 import { MenuCard } from "@/components/order/MenuCard";
 import { Cart } from "@/components/order/Cart";
 import { TableSelector } from "@/components/order/TableSelector";
@@ -17,7 +23,15 @@ import { useVoiceOrder } from "@/hooks/useVoiceOrder";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
 import { mapProductsToMenuItems } from "@/lib/helpers";
-import { fetchTableBySession } from "@/services/table.service";
+import {
+  fetchTableBySession,
+  fetchTableDetail,
+} from "@/services/table.service";
+import {
+  createOrder,
+  createOrderItems,
+  ApiOrderType,
+} from "@/services/order.service";
 import {
   Dialog,
   DialogContent,
@@ -25,31 +39,46 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, AlertCircle } from "lucide-react";
 
 export default function OrderPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
   const [showOrderStatus, setShowOrderStatus] = useState(false);
+  const [showCartPopup, setShowCartPopup] = useState(false);
   const [lockedTableLabel, setLockedTableLabel] = useState<string | null>(null);
 
-  const { placeOrder, setSelectedTable } = useOrder();
+  const { placeOrder, setSelectedTable, getCartItemCount, cart } = useOrder();
   const [isSessionLocked, setIsSessionLocked] = useState(false);
+  const [lockedTableId, setLockedTableId] = useState<string | null>(null);
+  const [existingOrderId, setExistingOrderId] = useState<string | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [placeOrderError, setPlaceOrderError] = useState<string | null>(null);
 
-  // Resolve session token from URL → set table
+  // Resolve session token from URL → set table, then fetch table detail
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const session = params.get("session");
     if (!session) return;
     fetchTableBySession(session)
       .then((res) => {
-        setSelectedTable(res.data.tableId);
-        setLockedTableLabel(`Table ${res.data.tableNumber} (${res.data.areaName})`);
+        const tableId = res.data.tableId;
+        setSelectedTable(tableId);
+        setLockedTableId(tableId);
+        setLockedTableLabel(
+          `Table ${res.data.tableNumber} (${res.data.areaName})`,
+        );
         setIsSessionLocked(true);
         // Remove session param from URL without reload
         const url = new URL(window.location.href);
         url.searchParams.delete("session");
         window.history.replaceState({}, "", url.toString());
+        // Fetch table detail to check for existing order
+        return fetchTableDetail(tableId);
+      })
+      .then((detail) => {
+        if (detail?.data?.Orders?.id) {
+          setExistingOrderId(detail.data.Orders.id);
+        }
       })
       .catch((err) => console.error("Không lấy được bàn từ session:", err));
   }, []);
@@ -157,20 +186,86 @@ export default function OrderPage() {
     );
   }, [pageIndex, totalPages]);
 
-  const handlePlaceOrder = () => {
-    const order = placeOrder();
-    if (order) {
-      setCurrentOrder(order);
-      setShowOrderStatus(true);
+  const handlePlaceOrder = async () => {
+    if (!lockedTableId || cart.length === 0) return;
+
+    setIsPlacingOrder(true);
+    setPlaceOrderError(null);
+
+    try {
+      let orderId = existingOrderId;
+
+      // If no existing order, create one first
+      if (!orderId) {
+        const orderRes = await createOrder({
+          tableId: lockedTableId,
+          accountId: null,
+          orderType: ApiOrderType.DineIn,
+        });
+        if (!orderRes.succeeded || !orderRes.data) {
+          throw new Error(orderRes.message || "Tạo đơn hàng thất bại");
+        }
+        orderId = orderRes.data as string;
+        setExistingOrderId(orderId);
+      }
+
+      // Post order items
+      const items = cart.map((item) => ({
+        productId: item.menuItem.id,
+        note: "",
+        quantity: item.quantity,
+      }));
+
+      const itemsRes = await createOrderItems({
+        orderId,
+        orderChannel: "QR",
+        createdBy: null,
+        items,
+      });
+
+      // @ts-ignore – response shape may vary
+      if (itemsRes.succeeded === false) {
+        throw new Error("Gửi món thất bại");
+      }
+
+      // Success path – show status dialog
+      const order = placeOrder();
+      if (order) {
+        setCurrentOrder(order);
+        setShowOrderStatus(true);
+        setShowCartPopup(false);
+      }
+    } catch (err: any) {
+      console.error("Đặt món lỗi:", err);
+      setPlaceOrderError(err?.message ?? "Có lỗi xảy ra, vui lòng thử lại.");
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
+  const cartItemCount = getCartItemCount();
+
   return (
-    <div className="min-h-screen bg-orange-50/50 dark:bg-orange-950/20">
+    <div className="min-h-screen overflow-x-hidden bg-orange-50/50 dark:bg-orange-950/20">
+      <div className="fixed top-3 right-3 z-50 lg:hidden">
+        <Button
+          onClick={() => setShowCartPopup(true)}
+          className="relative h-10 gap-2 bg-orange-600 px-3 text-white shadow-lg hover:bg-orange-700"
+        >
+          <ShoppingCart className="h-4 w-4" />
+          <span className="text-xs font-semibold">Giỏ hàng</span>
+          {cartItemCount > 0 && (
+            <span className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+              {cartItemCount}
+            </span>
+          )}
+        </Button>
+      </div>
+
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" asChild>
                 <Link href="/">
@@ -191,22 +286,22 @@ export default function OrderPage() {
                 </Link>
               </Button>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold">
-                  <span className="text-orange-600">
-                    Restaurant Menu
-                  </span>
+                <h1 className="text-lg sm:text-2xl font-bold leading-tight">
+                  <span className="text-orange-600">Đặt món</span>
                 </h1>
                 <p className="text-muted-foreground text-xs sm:text-sm">
-                  Select your dishes and place an order
+                  Chọn món và đặt hàng
                 </p>
               </div>
             </div>
-            <div className="flex w-full md:w-auto flex-wrap md:flex-nowrap items-start sm:items-center gap-2 sm:gap-3">
-              <VoiceOrderButton
-                isListening={isListening}
-                isSupported={isSupported}
-                onToggle={toggleListening}
-              />
+            <div className="flex w-full md:w-auto flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <div className="w-full sm:w-auto">
+                <VoiceOrderButton
+                  isListening={isListening}
+                  isSupported={isSupported}
+                  onToggle={toggleListening}
+                />
+              </div>
               <TableSelector
                 disabled={isSessionLocked}
                 lockedTableLabel={lockedTableLabel}
@@ -217,12 +312,12 @@ export default function OrderPage() {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* Menu Section */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {/* Voice Order Feedback */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <VoiceOrderFeedback
                 isListening={isListening}
                 isProcessing={isProcessing}
@@ -275,12 +370,13 @@ export default function OrderPage() {
                 value={selectedCategory}
                 onValueChange={(v) => setSelectedCategory(v)}
               >
-                <TabsList className="mb-6 h-auto gap-2 bg-transparent p-0 flex overflow-x-auto scrollbar-hide whitespace-nowrap pb-2">
+                <TabsList className="mb-4 sm:mb-6 h-auto w-full gap-2 bg-transparent p-0 flex overflow-x-auto scrollbar-hide whitespace-nowrap pb-2 -mx-1 px-1">
                   {categoryTabs.map((category) => (
                     <TabsTrigger
                       key={category.value}
                       value={category.value}
-                      className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-full px-4 shrink-0"
+                      disabled={isCategoriesLoading}
+                      className="data-[state=active]:bg-orange-600 data-[state=active]:text-white rounded-full px-3 sm:px-4 text-xs sm:text-sm shrink-0"
                     >
                       {category.label}
                     </TabsTrigger>
@@ -295,7 +391,7 @@ export default function OrderPage() {
                       </p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 min-[360px]:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                       {filteredItems.map((item) => (
                         <MenuCard key={item.id} item={item} />
                       ))}
@@ -305,7 +401,7 @@ export default function OrderPage() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="mt-8 flex items-center justify-center gap-2 overflow-x-auto pb-1">
+                  <div className="mt-6 sm:mt-8 flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-1">
                     <Button
                       variant="outline"
                       size="sm"
@@ -351,9 +447,13 @@ export default function OrderPage() {
           </div>
 
           {/* Cart Sidebar */}
-          <aside className="lg:w-80 xl:w-96">
+          <aside className="hidden w-full lg:block lg:w-80 xl:w-96">
             <div className="lg:sticky lg:top-24">
-              <Cart onPlaceOrder={handlePlaceOrder} />
+              <Cart
+                onPlaceOrder={handlePlaceOrder}
+                isPlacingOrder={isPlacingOrder}
+                placeOrderError={placeOrderError}
+              />
             </div>
           </aside>
         </div>
@@ -361,7 +461,7 @@ export default function OrderPage() {
 
       {/* Order Status Dialog */}
       <Dialog open={showOrderStatus} onOpenChange={setShowOrderStatus}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100%-1.5rem)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Order Placed Successfully!</DialogTitle>
             <DialogDescription>
@@ -369,6 +469,24 @@ export default function OrderPage() {
             </DialogDescription>
           </DialogHeader>
           <OrderStatusDisplay order={currentOrder} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCartPopup} onOpenChange={setShowCartPopup}>
+        <DialogContent className="w-[calc(100%-1rem)] max-w-sm p-0">
+          <DialogHeader className="px-4 pt-4 pb-0">
+            <DialogTitle>Giỏ hàng của bạn</DialogTitle>
+            <DialogDescription>
+              Xem, chỉnh số lượng món và đặt đơn ngay tại đây.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 pt-3">
+            <Cart
+              onPlaceOrder={handlePlaceOrder}
+              isPlacingOrder={isPlacingOrder}
+              placeOrderError={placeOrderError}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

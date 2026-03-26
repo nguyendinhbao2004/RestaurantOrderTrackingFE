@@ -7,6 +7,34 @@ import { API_ENDPOINTS } from "@/lib/api-config";
 import { httpClient } from "@/lib/http-client";
 import { ApiTable, AreaApiTable, TableListParams } from "@/types";
 
+export interface TableOrderItem {
+  id: string;
+  productId: string;
+  productName: string;
+  price: number;
+  quantity: number;
+  note: string;
+  status: string;
+}
+
+export interface TableOrder {
+  id: string;
+  orderType: string;
+  status: string;
+  totalAmount: number;
+  orderItems: TableOrderItem[];
+}
+
+export interface TableDetailData {
+  id: string;
+  tableNumber: string;
+  areaName: string;
+  status: string;
+  qrCode: string | null;
+  capacity: number;
+  Orders: TableOrder | null;
+}
+
 export interface QrSessionData {
     tableId: string;
     tableNumber: string;
@@ -60,4 +88,8 @@ export async function fetchTableBySession(session: string) {
 
 export async function updateTableStatus(id: string, status: string) {
     return httpClient.put<any>(API_ENDPOINTS.tables.updateStatus, { id, status });
+}
+
+export async function fetchTableDetail(tableId: string) {
+    return httpClient.get<TableDetailData>(API_ENDPOINTS.tables.detail(tableId));
 }

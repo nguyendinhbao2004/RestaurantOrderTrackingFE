@@ -8,7 +8,7 @@ export enum ApiOrderType {
 
 export interface CreateOrderRequest {
   tableId: string;
-  accountId: string;
+  accountId: string | null;
   orderType: ApiOrderType;
 }
 
@@ -21,7 +21,7 @@ export interface CreateOrderItemLine {
 export interface CreateOrderItemsRequest {
   orderId: string;
   orderChannel: string;
-  createdBy: string;
+  createdBy: string | null;
   items: CreateOrderItemLine[];
 }
 

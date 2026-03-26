@@ -11,7 +11,7 @@ interface JwtPayload {
     exp?: number;
 }
 
-const VALID_ROLES: Role[] = ['admin', 'chef', 'waiter', 'cashier', 'customer'];
+const VALID_ROLES: Role[] = ['admin', 'chef', 'headchef', 'waiter', 'cashier', 'customer'];
 
 function normalizeRole(role: unknown): Role | null {
     if (typeof role !== 'string') return null;
@@ -93,6 +93,7 @@ export function getCurrentUser(): User | null {
 export const roleRedirectPaths: Record<Role, string> = {
     admin: '/admin',
     chef: '/chef',
+    headchef: '/head-chef',
     waiter: '/waiter',
     cashier: '/cashier',
     customer: '/menu',
@@ -103,6 +104,7 @@ export const protectedRoutes: Record<string, Role[]> = {
     '/admin/employees': ['admin'],
     '/admin/revenue': ['admin'],
     '/chef': ['chef'],
+    '/head-chef': ['headchef'],
     '/waiter': ['waiter'],
     '/cashier': ['cashier'],
     '/tables': ['admin', 'waiter', 'cashier'],

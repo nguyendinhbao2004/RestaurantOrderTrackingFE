@@ -17,41 +17,48 @@ interface TableSelectorProps {
   lockedTableLabel?: string | null;
 }
 
-export function TableSelector({ disabled, lockedTableLabel }: TableSelectorProps) {
+export function TableSelector({
+  disabled,
+  lockedTableLabel,
+}: TableSelectorProps) {
   const { tables, isLoading } = useTable();
   const { selectedTable, setSelectedTable } = useOrder();
   const selectedTableInfo = tables.find((table) => table.id === selectedTable);
 
   const displayValue = selectedTableInfo
-    ? `Table ${selectedTableInfo.tableNumber}`
+    ? `Bàn ${selectedTableInfo.tableNumber}` // Cập nhật nhẹ phần hiển thị thành "Bàn" thay vì "Table" cho đồng bộ tiếng Việt
     : lockedTableLabel || undefined;
 
   return (
-    <div className="flex w-full sm:w-auto flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-      <label className="text-xs sm:text-sm font-medium leading-none">Select Table:</label>
-      <Select value={selectedTable || ""} onValueChange={setSelectedTable} disabled={disabled}>
-        <SelectTrigger className="w-full sm:w-auto min-w-0 sm:min-w-[160px] sm:max-w-[260px]">
+    <div className="flex w-full min-w-0 flex-col gap-1.5 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+      <label className="text-[11px] sm:text-sm font-medium leading-none text-muted-foreground sm:text-foreground">
+        Bàn:
+      </label>
+      <Select
+        value={selectedTable || ""}
+        onValueChange={setSelectedTable}
+        disabled={disabled}
+      >
+        <SelectTrigger className="w-full min-w-0 sm:w-auto sm:min-w-[170px] sm:max-w-[260px]">
           {isLoading ? (
             <div className="flex items-center gap-2">
               <Loader2 className="h-3 w-3 animate-spin" />
-              <span className="text-muted-foreground text-sm">Loading...</span>
+              <span className="text-muted-foreground text-sm">Đang tải...</span>
             </div>
           ) : (
-            <SelectValue placeholder="Choose a table">
-              {displayValue}
-            </SelectValue>
+            <SelectValue placeholder="Chọn bàn">{displayValue}</SelectValue>
           )}
         </SelectTrigger>
         <SelectContent>
           {tables.length === 0 ? (
             <SelectItem value="none" disabled>
-              No tables available
+              Không có bàn
             </SelectItem>
           ) : (
             tables.map((table) => (
               <SelectItem key={table.id} value={table.id}>
                 <div className="flex items-center gap-2">
-                  <span>Table {table.tableNumber}</span>
+                  <span>Bàn {table.tableNumber}</span>
                   <Badge variant="outline" className="text-xs">
                     {table.areaName}
                   </Badge>

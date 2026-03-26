@@ -13,7 +13,7 @@ import {Search, Plus, Minus, Trash2, ChevronLeft, ChevronRight, Loader2, AlertCi
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useBanks } from "@/contexts/BanksContext";
-import { fetchTables } from "@/services/table.service";
+import { fetchTableDetail, fetchTables } from "@/services/table.service";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
 import { createBill, getPaymentInfoByOrderId, payBill, PaymentInfoByOrderData,} from "@/services/cashier.service";
@@ -21,8 +21,6 @@ import { ApiOrderType, createOrder, createOrderItems, resolveOrderId, updateOrde
 import { buildVietQrImageUrl, createPaymentLink, PaymentLinkData,} from "@/services/online-order.service";
 import { CashierCheckInNotice, consumeCashierCheckInNotice,} from "@/services/work-schedule.service";
 import { formatCurrency, mapProductsToMenuItems } from "@/lib/helpers";
-import { API_ENDPOINTS } from "@/lib/api-config";
-import { httpClient } from "@/lib/http-client";
 import { usePaymentSuccessSignalR, type PaymentMessage,} from "@/hooks/usePaymentSuccessSignalR";
 import { MenuItem, Category } from "@/types";
 
@@ -522,9 +520,7 @@ export default function CashierPOSPage() {
   const loadTableDetail = useCallback(async (tableId: string) => {
     setTableDetailLoading(true);
     try {
-      const res = await httpClient.get<unknown>(
-        API_ENDPOINTS.tables.detail(tableId),
-      );
+      const res = await fetchTableDetail(tableId);
       setTableDetail(mapTableDetailResponse(res.data));
     } catch {
       setTableDetail(null);
