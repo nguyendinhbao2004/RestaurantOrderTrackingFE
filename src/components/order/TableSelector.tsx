@@ -26,7 +26,7 @@ export function TableSelector({
   const selectedTableInfo = tables.find((table) => table.id === selectedTable);
 
   const displayValue = selectedTableInfo
-    ? `Table ${selectedTableInfo.tableNumber}`
+    ? `Bàn ${selectedTableInfo.tableNumber}` // Cập nhật nhẹ phần hiển thị thành "Bàn" thay vì "Table" cho đồng bộ tiếng Việt
     : lockedTableLabel || undefined;
 
   return (
@@ -43,7 +43,7 @@ export function TableSelector({
           {isLoading ? (
             <div className="flex items-center gap-2">
               <Loader2 className="h-3 w-3 animate-spin" />
-              <span className="text-muted-foreground text-sm">Loading...</span>
+              <span className="text-muted-foreground text-sm">Đang tải...</span>
             </div>
           ) : (
             <SelectValue placeholder="Chọn bàn">{displayValue}</SelectValue>
