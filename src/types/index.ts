@@ -100,7 +100,7 @@ export interface DashboardStats {
 export interface CartItem {
     menuItem: MenuItem;
     quantity: number;
-    notes?: string;
+    notes: string[]; // added notes, length ≤ quantity
 }
 
 // ==================== AUTH ====================

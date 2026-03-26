@@ -19,6 +19,9 @@ export interface ChefOrderItem {
   createdAt: string;    // orderAt
   createdBy: string | null;
   createdByName: string | null;
+  tableNumber: string | null;
+  areaName: string | null;
+  orderType: string | null;
 }
 
 // ==================== PAYLOAD TYPES ====================
@@ -45,6 +48,9 @@ export async function getChefOrderItems() {
       orderAt: string;
       createdBy: string | null;
       createdByName: string | null;
+      tableNumber: string | null;
+      areaName: string | null;
+      orderType: string | null;
     }>
   >(API_ENDPOINTS.orderItems.byAccount);
 
@@ -59,6 +65,9 @@ export async function getChefOrderItems() {
     createdAt: item.orderAt,
     createdBy: item.createdBy,
     createdByName: item.createdByName,
+    tableNumber: item.tableNumber ?? null,
+    areaName: item.areaName ?? null,
+    orderType: item.orderType ?? null,
   }));
 
   return { ...response, data: normalised };

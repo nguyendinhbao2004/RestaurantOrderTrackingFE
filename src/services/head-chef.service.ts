@@ -23,6 +23,12 @@ export interface OrderItemByAccount {
   orderAt: string;
   createdBy: string | null;
   createdByName: string | null;
+  tableId: string | null;
+  tableNumber: number | null;
+  areaId: string | null;
+  areaName: string | null;
+  orderType: string | null;
+  orderStatus: string | null;
 }
 
 export interface AvailableChef {
@@ -40,7 +46,7 @@ export interface UpdateStatusRequest {
   newStatus: number;
   accountId: string;
   changeSource: string;
-  assigneeId: string;
+  assigneeId: string | null;
 }
 
 export interface UpdateStatusResponse {
@@ -122,4 +128,40 @@ export async function updateOrderItemStatus(
 
   const json = await res.json();
   return json as UpdateStatusResponse;
+}
+
+export interface UpdateOrderStatusRequest {
+  id: string;
+  newStatus: number;
+}
+
+export interface UpdateOrderStatusResponse {
+  succeeded: boolean;
+  message: string;
+  errors: string[];
+}
+
+/**
+ * Update the overall order status.
+ * PUT /api/Order/Update-Status
+ */
+export async function updateOrderStatus(
+  payload: UpdateOrderStatusRequest,
+): Promise<UpdateOrderStatusResponse> {
+  const token = getToken();
+  const res = await fetch(API_ENDPOINTS.orders.updateStatus, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to update order status: ${res.status}`);
+  }
+
+  const json = await res.json();
+  return json as UpdateOrderStatusResponse;
 }

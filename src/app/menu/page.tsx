@@ -137,6 +137,9 @@ export default function MenuPage() {
     addToCart,
     removeFromCart,
     updateCartQuantity,
+    addCartNote,
+    updateCartNote,
+    removeCartNote,
     getCartTotal,
     getCartItemCount,
     clearCart,
@@ -297,11 +300,15 @@ export default function MenuPage() {
         customerPhone: deliveryInfo.phone.trim(),
         customerAddress: deliveryInfo.address.trim(),
         paymentMethod: PAYMENT_METHOD_TO_API_VALUE[paymentMethod],
-        items: cart.map((item) => ({
-          productId: item.menuItem.id,
-          note: item.notes?.trim() || "",
-          quantity: item.quantity,
-        })),
+        // Each portion becomes a separate item (quantity=1) with its own note.
+        // Portions without a note send an empty string.
+        items: cart.flatMap((item) =>
+          Array.from({ length: item.quantity }, (_, i) => ({
+            productId: item.menuItem.id,
+            note: (item.notes[i] ?? "").trim(),
+            quantity: 1,
+          }))
+        ),
       });
 
       setOrderId(response.data.orderId);
@@ -664,7 +671,7 @@ export default function MenuPage() {
 
       {/* ─── Cart Drawer ─── */}
       <Dialog open={showCart} onOpenChange={setShowCart}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 max-h-[90vh] flex flex-col">
+        <DialogContent className="sm:max-w-lg p-0 gap-0 h-[95vh] flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle className="flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-orange-600" />
@@ -709,63 +716,100 @@ export default function MenuPage() {
                   {cart.map((item) => (
                     <div
                       key={item.menuItem.id}
-                      className="flex items-center gap-3"
+                      className="flex flex-col gap-2 pb-3 border-b border-border/40 last:border-0 last:pb-0"
                     >
-                      <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-border/50">
-                        <Image
-                          src={item.menuItem.image}
-                          alt={item.menuItem.name}
-                          width={56}
-                          height={56}
-                          className="w-full h-full object-cover"
-                        />
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-border/50">
+                          <Image
+                            src={item.menuItem.image}
+                            alt={item.menuItem.name}
+                            width={56}
+                            height={56}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-sm truncate">
+                            {item.menuItem.name}
+                          </h4>
+                          <p className="text-sm text-orange-600 font-semibold">
+                            {formatCurrency(item.menuItem.price)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 rounded-full"
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.menuItem.id,
+                                item.quantity - 1,
+                              )
+                            }
+                          >
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="w-6 text-center text-sm font-semibold">
+                            {item.quantity}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7 rounded-full"
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.menuItem.id,
+                                item.quantity + 1,
+                              )
+                            }
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive rounded-full"
+                            onClick={() => removeFromCart(item.menuItem.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-sm truncate">
-                          {item.menuItem.name}
-                        </h4>
-                        <p className="text-sm text-orange-600 font-semibold">
-                          {formatCurrency(item.menuItem.price)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7 rounded-full"
-                          onClick={() =>
-                            updateCartQuantity(
-                              item.menuItem.id,
-                              item.quantity - 1,
-                            )
-                          }
-                        >
-                          <Minus className="w-3 h-3" />
-                        </Button>
-                        <span className="w-6 text-center text-sm font-semibold">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7 rounded-full"
-                          onClick={() =>
-                            updateCartQuantity(
-                              item.menuItem.id,
-                              item.quantity + 1,
-                            )
-                          }
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive rounded-full"
-                          onClick={() => removeFromCart(item.menuItem.id)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                      {/* Multi-note section */}
+                      <div className="pl-[68px] flex flex-col gap-1.5">
+                        {item.notes.map((note, i) => (
+                          <div key={i} className="relative">
+                            <FileText className="absolute left-2.5 top-2.5 w-3 h-3 text-muted-foreground pointer-events-none" />
+                            <Input
+                              autoFocus={i === item.notes.length - 1 && note === ""}
+                              placeholder={`Ghi chú phần ${i + 1}...`}
+                              value={note}
+                              onChange={(e) => updateCartNote(item.menuItem.id, i, e.target.value)}
+                              className="h-8 pl-7 pr-7 text-xs rounded-lg border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 focus:border-orange-400 focus:bg-background placeholder:text-muted-foreground/60"
+                            />
+                            <button
+                              type="button"
+                              onMouseDown={(e) => { e.preventDefault(); removeCartNote(item.menuItem.id, i); }}
+                              className="absolute right-2 top-1.5 text-muted-foreground/50 hover:text-destructive transition-colors"
+                              aria-label="Xóa ghi chú"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {item.notes.length < item.quantity && (
+                          <button
+                            type="button"
+                            onClick={() => addCartNote(item.menuItem.id)}
+                            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-orange-600 transition-colors group w-fit"
+                          >
+                            <span className="w-4 h-4 rounded-full border border-dashed border-muted-foreground/50 group-hover:border-orange-500 flex items-center justify-center transition-colors flex-shrink-0">
+                              <Plus className="w-2.5 h-2.5" />
+                            </span>
+                            <span>Thêm ghi chú</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1162,23 +1206,6 @@ export default function MenuPage() {
                         className="rounded-xl"
                       />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-orange-500" />
-                        Ghi chú (tùy chọn)
-                      </label>
-                      <Input
-                        value={deliveryInfo.notes}
-                        onChange={(e) =>
-                          setDeliveryInfo((d) => ({
-                            ...d,
-                            notes: e.target.value,
-                          }))
-                        }
-                        placeholder="Hướng dẫn đặc biệt, số tầng, v.v."
-                        className="rounded-xl"
-                      />
-                    </div>
                   </div>
                 )}
 
@@ -1425,5 +1452,66 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Self-contained note field ───────────────────────────────────────────────
+// Uses its own useState so it never leaks open/close state to the page level.
+// Resets automatically when the cart dialog unmounts.
+function CartItemNoteField({
+  itemId,
+  note,
+  onNoteChange,
+}: {
+  itemId: string;
+  note: string;
+  onNoteChange: (itemId: string, note: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (open) {
+    return (
+      <div className="relative">
+        <FileText className="absolute left-2.5 top-2.5 w-3 h-3 text-muted-foreground pointer-events-none" />
+        <Input
+          autoFocus
+          placeholder="Ghi chú cho món này..."
+          value={note}
+          onChange={(e) => onNoteChange(itemId, e.target.value)}
+          onBlur={() => setOpen(false)}
+          className="h-8 pl-7 pr-7 text-xs rounded-lg border-orange-300 bg-orange-50/60 dark:bg-orange-950/20 focus:bg-background placeholder:text-muted-foreground/60"
+        />
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            // Prevent blur before click fires
+            e.preventDefault();
+            onNoteChange(itemId, "");
+            setOpen(false);
+          }}
+          className="absolute right-2 top-1.5 text-muted-foreground/60 hover:text-destructive transition-colors"
+          aria-label="Xóa ghi chú"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-orange-600 transition-colors group"
+    >
+      <span className="w-4 h-4 rounded-full border border-dashed border-muted-foreground/50 group-hover:border-orange-500 flex items-center justify-center transition-colors flex-shrink-0">
+        <Plus className="w-2.5 h-2.5" />
+      </span>
+      {note ? (
+        <span className="italic text-orange-600 truncate max-w-[200px]">{note}</span>
+      ) : (
+        <span>Thêm ghi chú</span>
+      )}
+    </button>
   );
 }

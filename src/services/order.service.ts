@@ -32,6 +32,26 @@ export interface UpdateOrderStatusRequest {
 
 export type CreateOrderResponseData = string | null;
 
+export interface OrderItemDetail {
+  id: string;
+  orderId: string;
+  status: string;
+}
+
+export interface OrderDetail {
+  id: string;
+  orderType: string;
+  status: string;
+  orderItems: OrderItemDetail[];
+}
+
+export interface GetOrderByIdResponse {
+  succeeded: boolean;
+  message: string;
+  data: OrderDetail;
+  errors: string[];
+}
+
 export function resolveOrderId(orderData: CreateOrderResponseData): string | null {
   if (typeof orderData === "string" && orderData.trim()) return orderData;
   return null;
@@ -47,4 +67,8 @@ export async function createOrderItems(payload: CreateOrderItemsRequest) {
 
 export async function updateOrderStatus(payload: UpdateOrderStatusRequest) {
   return httpClient.put<string>(API_ENDPOINTS.orders.updateStatus, payload);
+}
+
+export async function getOrderById(id: string) {
+  return httpClient.get<OrderDetail>(API_ENDPOINTS.orders.detail(id));
 }

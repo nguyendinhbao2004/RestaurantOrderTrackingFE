@@ -23,15 +23,7 @@ import { useVoiceOrder } from "@/hooks/useVoiceOrder";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
 import { mapProductsToMenuItems } from "@/lib/helpers";
-import {
-  fetchTableBySession,
-  fetchTableDetail,
-} from "@/services/table.service";
-import {
-  createOrder,
-  createOrderItems,
-  ApiOrderType,
-} from "@/services/order.service";
+import { fetchTableBySession } from "@/services/table.service";
 import {
   Dialog,
   DialogContent,
@@ -47,38 +39,23 @@ export default function OrderPage() {
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [lockedTableLabel, setLockedTableLabel] = useState<string | null>(null);
 
-  const { placeOrder, setSelectedTable, getCartItemCount, cart } = useOrder();
+  const { placeOrder, setSelectedTable, getCartItemCount } = useOrder();
   const [isSessionLocked, setIsSessionLocked] = useState(false);
-  const [lockedTableId, setLockedTableId] = useState<string | null>(null);
-  const [existingOrderId, setExistingOrderId] = useState<string | null>(null);
-  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [placeOrderError, setPlaceOrderError] = useState<string | null>(null);
 
-  // Resolve session token from URL → set table, then fetch table detail
+  // Resolve session token from URL → set table
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const session = params.get("session");
     if (!session) return;
     fetchTableBySession(session)
       .then((res) => {
-        const tableId = res.data.tableId;
-        setSelectedTable(tableId);
-        setLockedTableId(tableId);
-        setLockedTableLabel(
-          `Table ${res.data.tableNumber} (${res.data.areaName})`,
-        );
+        setSelectedTable(res.data.tableId);
+        setLockedTableLabel(`Table ${res.data.tableNumber} (${res.data.areaName})`);
         setIsSessionLocked(true);
         // Remove session param from URL without reload
         const url = new URL(window.location.href);
         url.searchParams.delete("session");
         window.history.replaceState({}, "", url.toString());
-        // Fetch table detail to check for existing order
-        return fetchTableDetail(tableId);
-      })
-      .then((detail) => {
-        if (detail?.data?.Orders?.id) {
-          setExistingOrderId(detail.data.Orders.id);
-        }
       })
       .catch((err) => console.error("Không lấy được bàn từ session:", err));
   }, []);
@@ -186,60 +163,12 @@ export default function OrderPage() {
     );
   }, [pageIndex, totalPages]);
 
-  const handlePlaceOrder = async () => {
-    if (!lockedTableId || cart.length === 0) return;
-
-    setIsPlacingOrder(true);
-    setPlaceOrderError(null);
-
-    try {
-      let orderId = existingOrderId;
-
-      // If no existing order, create one first
-      if (!orderId) {
-        const orderRes = await createOrder({
-          tableId: lockedTableId,
-          accountId: null,
-          orderType: ApiOrderType.DineIn,
-        });
-        if (!orderRes.succeeded || !orderRes.data) {
-          throw new Error(orderRes.message || "Tạo đơn hàng thất bại");
-        }
-        orderId = orderRes.data as string;
-        setExistingOrderId(orderId);
-      }
-
-      // Post order items
-      const items = cart.map((item) => ({
-        productId: item.menuItem.id,
-        note: "",
-        quantity: item.quantity,
-      }));
-
-      const itemsRes = await createOrderItems({
-        orderId,
-        orderChannel: "QR",
-        createdBy: null,
-        items,
-      });
-
-      // @ts-ignore – response shape may vary
-      if (itemsRes.succeeded === false) {
-        throw new Error("Gửi món thất bại");
-      }
-
-      // Success path – show status dialog
-      const order = placeOrder();
-      if (order) {
-        setCurrentOrder(order);
-        setShowOrderStatus(true);
-        setShowCartPopup(false);
-      }
-    } catch (err: any) {
-      console.error("Đặt món lỗi:", err);
-      setPlaceOrderError(err?.message ?? "Có lỗi xảy ra, vui lòng thử lại.");
-    } finally {
-      setIsPlacingOrder(false);
+  const handlePlaceOrder = () => {
+    const order = placeOrder();
+    if (order) {
+      setCurrentOrder(order);
+      setShowOrderStatus(true);
+      setShowCartPopup(false);
     }
   };
 
@@ -247,6 +176,7 @@ export default function OrderPage() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-orange-50/50 dark:bg-orange-950/20">
+      {/* Mobile Fixed Cart Button */}
       <div className="fixed top-3 right-3 z-50 lg:hidden">
         <Button
           onClick={() => setShowCartPopup(true)}
@@ -287,10 +217,12 @@ export default function OrderPage() {
               </Button>
               <div>
                 <h1 className="text-lg sm:text-2xl font-bold leading-tight">
-                  <span className="text-orange-600">Đặt món</span>
+                  <span className="text-orange-600">
+                    Restaurant Menu
+                  </span>
                 </h1>
                 <p className="text-muted-foreground text-xs sm:text-sm">
-                  Chọn món và đặt hàng
+                  Select your dishes and place an order
                 </p>
               </div>
             </div>
@@ -449,11 +381,7 @@ export default function OrderPage() {
           {/* Cart Sidebar */}
           <aside className="hidden w-full lg:block lg:w-80 xl:w-96">
             <div className="lg:sticky lg:top-24">
-              <Cart
-                onPlaceOrder={handlePlaceOrder}
-                isPlacingOrder={isPlacingOrder}
-                placeOrderError={placeOrderError}
-              />
+              <Cart onPlaceOrder={handlePlaceOrder} />
             </div>
           </aside>
         </div>
@@ -472,6 +400,7 @@ export default function OrderPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Mobile Cart Popup */}
       <Dialog open={showCartPopup} onOpenChange={setShowCartPopup}>
         <DialogContent className="w-[calc(100%-1rem)] max-w-sm p-0">
           <DialogHeader className="px-4 pt-4 pb-0">
@@ -481,11 +410,7 @@ export default function OrderPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="p-4 pt-3">
-            <Cart
-              onPlaceOrder={handlePlaceOrder}
-              isPlacingOrder={isPlacingOrder}
-              placeOrderError={placeOrderError}
-            />
+            <Cart onPlaceOrder={handlePlaceOrder} />
           </div>
         </DialogContent>
       </Dialog>
