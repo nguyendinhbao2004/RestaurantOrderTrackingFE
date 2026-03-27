@@ -93,7 +93,6 @@ export default function TablesPage() {
                     }
                 }
 
-                await updateTableStatus(tableId, "Reserved");
                 alert("Thành công");
                 
                 setAreaTables((prev) =>
