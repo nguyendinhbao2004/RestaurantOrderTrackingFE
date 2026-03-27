@@ -190,7 +190,7 @@ export default function OrderPage() {
       const payload = {
         orderId: currentOrderId,
         orderChannel: "QR",
-        createdBy: "",
+        createdBy: null,
         items: cart.map(item => ({
           productId: item.menuItem.id,
           note: item.notes.filter(Boolean).join(", ") || "",
