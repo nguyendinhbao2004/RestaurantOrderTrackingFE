@@ -109,7 +109,7 @@ export default function EmployeesPage() {
                     fullName: formData.fullName,
                     phone: formData.phone,
                     password: formData.password,
-                    image: formData.image || undefined,
+                    image: "",
                     roleId: roleId,
                 };
             } else if (roleId === 3) {
@@ -117,7 +117,7 @@ export default function EmployeesPage() {
                 payload = {
                     userName: formData.userName,
                     fullName: formData.fullName,
-                    img: formData.image || undefined,
+                    img: "",
                     phone: formData.phone,
                     password: formData.password,
                     specialty: Number(formData.specialty),
@@ -128,7 +128,7 @@ export default function EmployeesPage() {
                 payload = {
                     userName: formData.userName,
                     fullName: formData.fullName,
-                    img: formData.image || undefined,
+                    img: "",
                     phone: formData.phone,
                     password: formData.password,
                     skillLevel: formData.skillLevel,
@@ -138,7 +138,7 @@ export default function EmployeesPage() {
                 payload = {
                     userName: formData.userName,
                     fullName: formData.fullName,
-                    img: formData.image || undefined,
+                    img: "",
                     phone: formData.phone,
                     password: formData.password,
                     areaId: formData.areaId,
@@ -287,6 +287,14 @@ export default function EmployeesPage() {
                                     {ROLE_OPTIONS.map((r) => <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium mb-2 block">Ảnh đại diện</label>
+                            <Input
+                                type="file"
+                                accept="image/*"
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-600 hover:file:bg-orange-100"
+                            />
                         </div>
 
                         {/* Trường riêng cho Chef */}
