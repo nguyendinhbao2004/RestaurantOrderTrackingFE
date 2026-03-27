@@ -288,14 +288,6 @@ export default function EmployeesPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div>
-                            <label className="text-sm font-medium mb-2 block">Ảnh đại diện</label>
-                            <Input
-                                type="file"
-                                accept="image/*"
-                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-600 hover:file:bg-orange-100"
-                            />
-                        </div>
 
                         {/* Trường riêng cho Chef */}
                         {formData.roleId === "3" && (
