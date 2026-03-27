@@ -1410,12 +1410,12 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
           </Badge>
         </div>
 
-        <div className="absolute top-3 right-3">
+        {/* <div className="absolute top-3 right-3">
           <Badge className="bg-orange-600 hover:bg-orange-700 text-white text-xs">
             <Clock className="w-3 h-3 mr-1" />
             {item.preparationTime} phút
           </Badge>
-        </div>
+        </div> */}
       </div>
 
       <CardContent className="p-4 flex flex-col flex-1">
