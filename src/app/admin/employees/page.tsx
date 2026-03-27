@@ -89,16 +89,20 @@ export default function EmployeesPage() {
         if (!formData.userName.trim()) { setFormError("Tên tài khoản không được để trống."); return; }
         if (!formData.fullName.trim()) { setFormError("Họ tên không được để trống."); return; }
         if (!formData.password) { setFormError("Mật khẩu không được để trống."); return; }
+        if (!formData.phone.trim()) { setFormError("Số điện thoại không được để trống."); return; }
         // Validate theo role
         if (formData.roleId === "2" && !formData.areaId) { setFormError("Vui lòng chọn khu vực cho nhân viên phục vụ."); return; }
+        if (formData.roleId === "3" && !formData.specialty) { setFormError("Vui lòng chọn chuyên môn cho đầu bếp."); return; }
         if ((formData.roleId === "3" || formData.roleId === "4") && !formData.skillLevel) { setFormError("Vui lòng nhập trình độ kỹ năng cho bếp."); return; }
 
         setIsSaving(true);
         setFormError(null);
         try {
-            // Tùy role gửi đúng data
+            // Tùy role gửi đúng data và gọi API khác nhau
             let payload: any = {};
-            if (formData.roleId === "1" || formData.roleId === "5") {
+            const roleId = Number(formData.roleId);
+
+            if (roleId === 1 || roleId === 5) {
                 // Admin, Cashier
                 payload = {
                     userName: formData.userName,
@@ -106,9 +110,9 @@ export default function EmployeesPage() {
                     phone: formData.phone,
                     password: formData.password,
                     image: formData.image || undefined,
-                    roleId: Number(formData.roleId),
+                    roleId: roleId,
                 };
-            } else if (formData.roleId === "3") {
+            } else if (roleId === 3) {
                 // Chef
                 payload = {
                     userName: formData.userName,
@@ -116,9 +120,10 @@ export default function EmployeesPage() {
                     img: formData.image || undefined,
                     phone: formData.phone,
                     password: formData.password,
+                    specialty: Number(formData.specialty),
                     skillLevel: formData.skillLevel,
                 };
-            } else if (formData.roleId === "4") {
+            } else if (roleId === 4) {
                 // Head Chef
                 payload = {
                     userName: formData.userName,
@@ -128,7 +133,7 @@ export default function EmployeesPage() {
                     password: formData.password,
                     skillLevel: formData.skillLevel,
                 };
-            } else if (formData.roleId === "2") {
+            } else if (roleId === 2) {
                 // Waiter
                 payload = {
                     userName: formData.userName,
@@ -139,12 +144,16 @@ export default function EmployeesPage() {
                     areaId: formData.areaId,
                 };
             }
-            await createAccount(payload);
+            console.log("Creating account with roleId:", roleId, "payload:", payload);
+            // Pass roleId to createAccount so it calls the correct API endpoint
+            await createAccount(payload, roleId);
             setSuccessMsg(`Đã tạo tài khoản ${formData.fullName} thành công!`);
             setFormData({ userName: "", fullName: "", phone: "", password: "", image: "", roleId: "2", skillLevel: "", specialty: "", areaId: "" });
             loadEmployees();
         } catch (e: unknown) {
-            setFormError((e as { message?: string })?.message ?? "Có lỗi xảy ra khi tạo tài khoản.");
+            console.error("Error creating account:", e);
+            const errorMsg = (e as any)?.message || (e as any)?.data?.message || "Có lỗi xảy ra khi tạo tài khoản.";
+            setFormError(errorMsg);
         } finally {
             setIsSaving(false);
         }
@@ -261,7 +270,7 @@ export default function EmployeesPage() {
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="text-sm font-medium mb-2 block">Số điện thoại</label>
+                                <label className="text-sm font-medium mb-2 block">Số điện thoại <span className="text-destructive">*</span></label>
                                 <Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="0901234567" />
                             </div>
                             <div>
@@ -278,10 +287,6 @@ export default function EmployeesPage() {
                                     {ROLE_OPTIONS.map((r) => <SelectItem key={r.value} value={String(r.value)}>{r.label}</SelectItem>)}
                                 </SelectContent>
                             </Select>
-                        </div>
-                        <div>
-                            <label className="text-sm font-medium mb-2 block">URL ảnh đại diện</label>
-                            <Input value={formData.image} onChange={(e) => setFormData({ ...formData, image: e.target.value })} placeholder="https://..." />
                         </div>
 
                         {/* Trường riêng cho Chef */}
