@@ -307,7 +307,7 @@ export default function MenuPage() {
             productId: item.menuItem.id,
             note: (item.notes[i] ?? "").trim(),
             quantity: 1,
-          }))
+          })),
         ),
       });
 
@@ -782,15 +782,26 @@ export default function MenuPage() {
                           <div key={i} className="relative">
                             <FileText className="absolute left-2.5 top-2.5 w-3 h-3 text-muted-foreground pointer-events-none" />
                             <Input
-                              autoFocus={i === item.notes.length - 1 && note === ""}
+                              autoFocus={
+                                i === item.notes.length - 1 && note === ""
+                              }
                               placeholder={`Ghi chú phần ${i + 1}...`}
                               value={note}
-                              onChange={(e) => updateCartNote(item.menuItem.id, i, e.target.value)}
+                              onChange={(e) =>
+                                updateCartNote(
+                                  item.menuItem.id,
+                                  i,
+                                  e.target.value,
+                                )
+                              }
                               className="h-8 pl-7 pr-7 text-xs rounded-lg border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 focus:border-orange-400 focus:bg-background placeholder:text-muted-foreground/60"
                             />
                             <button
                               type="button"
-                              onMouseDown={(e) => { e.preventDefault(); removeCartNote(item.menuItem.id, i); }}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                removeCartNote(item.menuItem.id, i);
+                              }}
                               className="absolute right-2 top-1.5 text-muted-foreground/50 hover:text-destructive transition-colors"
                               aria-label="Xóa ghi chú"
                             >
@@ -1409,13 +1420,6 @@ function ProductCard({ item, onAdd }: { item: MenuItem; onAdd: () => void }) {
             {item.categoryName}
           </Badge>
         </div>
-
-        <div className="absolute top-3 right-3">
-          <Badge className="bg-orange-600 hover:bg-orange-700 text-white text-xs">
-            <Clock className="w-3 h-3 mr-1" />
-            {item.preparationTime} phút
-          </Badge>
-        </div>
       </div>
 
       <CardContent className="p-4 flex flex-col flex-1">
@@ -1508,7 +1512,9 @@ function CartItemNoteField({
         <Plus className="w-2.5 h-2.5" />
       </span>
       {note ? (
-        <span className="italic text-orange-600 truncate max-w-[200px]">{note}</span>
+        <span className="italic text-orange-600 truncate max-w-[200px]">
+          {note}
+        </span>
       ) : (
         <span>Thêm ghi chú</span>
       )}
