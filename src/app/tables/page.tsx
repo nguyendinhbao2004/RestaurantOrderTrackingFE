@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTableApi } from "@/hooks/useTableApi";
 import { fetchTablesByArea, generateQrSession, updateTableStatus, refreshQrSession } from "@/services/table.service";
+import { createOrder, ApiOrderType } from "@/services/order.service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -80,6 +81,18 @@ export default function TablesPage() {
             const qrCodeBase64 = res.data.qrCodeBase64;
             
             try {
+                if (user?.id) {
+                    try {
+                        await createOrder({
+                            tableId: tableId,
+                            accountId: user.id,
+                            orderType: ApiOrderType.DineIn
+                        });
+                    } catch (orderErr) {
+                        console.error("Lỗi khi tạo order:", orderErr);
+                    }
+                }
+
                 await updateTableStatus(tableId, "Reserved");
                 alert("Thành công");
                 
