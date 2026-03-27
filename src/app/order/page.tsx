@@ -23,7 +23,8 @@ import { useVoiceOrder } from "@/hooks/useVoiceOrder";
 import { fetchProducts } from "@/services/product.service";
 import { fetchCategories } from "@/services/category.service";
 import { mapProductsToMenuItems } from "@/lib/helpers";
-import { fetchTableBySession } from "@/services/table.service";
+import { createOrderItems } from "@/services/order.service";
+import { fetchTableBySession, fetchTableDetail } from "@/services/table.service";
 import {
   Dialog,
   DialogContent,
@@ -39,8 +40,9 @@ export default function OrderPage() {
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [lockedTableLabel, setLockedTableLabel] = useState<string | null>(null);
 
-  const { placeOrder, setSelectedTable, getCartItemCount } = useOrder();
+  const { placeOrder, setSelectedTable, getCartItemCount, cart, clearCart } = useOrder();
   const [isSessionLocked, setIsSessionLocked] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
   // Resolve session token from URL → set table
   useEffect(() => {
@@ -48,14 +50,27 @@ export default function OrderPage() {
     const session = params.get("session");
     if (!session) return;
     fetchTableBySession(session)
-      .then((res) => {
-        setSelectedTable(res.data.tableId);
+      .then(async (res) => {
+        const tableId = res.data.tableId;
+        setSelectedTable(tableId);
         setLockedTableLabel(`Table ${res.data.tableNumber} (${res.data.areaName})`);
         setIsSessionLocked(true);
         // Remove session param from URL without reload
         const url = new URL(window.location.href);
         url.searchParams.delete("session");
         window.history.replaceState({}, "", url.toString());
+
+        try {
+          const detailRes = await fetchTableDetail(tableId);
+          const orders = detailRes.data.Orders;
+          if (Array.isArray(orders) && orders.length > 0) {
+            setCurrentOrderId(orders[0].id);
+          } else if (orders && !Array.isArray(orders) && (orders as any).id) {
+            setCurrentOrderId((orders as any).id);
+          }
+        } catch (detailErr) {
+          console.error("Lỗi khi tải chi tiết bàn:", detailErr);
+        }
       })
       .catch((err) => console.error("Không lấy được bàn từ session:", err));
   }, []);
@@ -163,12 +178,34 @@ export default function OrderPage() {
     );
   }, [pageIndex, totalPages]);
 
-  const handlePlaceOrder = () => {
-    const order = placeOrder();
-    if (order) {
-      setCurrentOrder(order);
-      setShowOrderStatus(true);
+  const handlePlaceOrder = async () => {
+    if (!currentOrderId) {
+      alert("Bàn này chưa có cấu trúc đơn hàng. Vui lòng liên hệ nhân viên!");
+      return;
+    }
+
+    if (cart.length === 0) return;
+
+    try {
+      const payload = {
+        orderId: currentOrderId,
+        orderChannel: "QR",
+        createdBy: "",
+        items: cart.map(item => ({
+          productId: item.menuItem.id,
+          note: item.notes.filter(Boolean).join(", ") || "",
+          quantity: item.quantity
+        }))
+      };
+
+      await createOrderItems(payload);
+      
+      clearCart();
       setShowCartPopup(false);
+      alert("Gửi yêu cầu đặt món thành công!");
+    } catch (err) {
+      console.error("Lỗi đặt món:", err);
+      alert("Có lỗi xảy ra khi đặt món. Vui lòng thử lại.");
     }
   };
 

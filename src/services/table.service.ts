@@ -32,7 +32,7 @@ export interface TableDetailData {
   status: string;
   qrCode: string | null;
   capacity: number;
-  Orders: TableOrder | null;
+  Orders: TableOrder[] | null;
 }
 
 export interface QrSessionData {
